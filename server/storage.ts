@@ -58,6 +58,8 @@ const sqlite = new Database("data.db");
 sqlite.pragma("journal_mode = WAL");
 
 export const db = drizzle(sqlite);
+export const rawDb = sqlite;
+export const dbFilePath = "data.db";
 
 // Auto-create tables on startup
 function ensureTables() {

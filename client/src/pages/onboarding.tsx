@@ -927,14 +927,30 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
     update("weightUnit", unit);
   };
 
-  const displayWeight = data.weightUnit === "lbs" ? (data.weightKg * 2.20462).toFixed(1).replace(/\.0$/, '') : String(data.weightKg).replace(/\.0$/, '');
-  const setWeight = (raw: string) => {
-    // Allow empty, digits, and one decimal point
-    if (raw === '' || raw === '.') { update("weightKg", 0); return; }
-    const cleaned = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+  // Weight uses a local string state so decimals and backspace work naturally
+  const toDisplayWeight = (kg: number) => {
+    if (kg === 0) return '';
+    const val = data.weightUnit === 'lbs' ? kg * 2.20462 : kg;
+    const s = val.toFixed(1);
+    return s.endsWith('.0') ? s.slice(0, -2) : s;
+  };
+  const [weightStr, setWeightStr] = useState(toDisplayWeight(data.weightKg));
+  useEffect(() => { setWeightStr(toDisplayWeight(data.weightKg)); }, [data.weightUnit]);
+  const commitWeight = () => {
+    const cleaned = weightStr.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
     const val = parseFloat(cleaned);
-    if (isNaN(val)) return;
-    update("weightKg", data.weightUnit === "lbs" ? Math.round((val / 2.20462) * 10) / 10 : Math.round(val * 10) / 10);
+    if (!cleaned || isNaN(val)) { update('weightKg', 0); return; }
+    update('weightKg', data.weightUnit === 'lbs' ? Math.round((val / 2.20462) * 10) / 10 : Math.round(val * 10) / 10);
+  };
+  const handleWeightChange = (raw: string) => {
+    // Only allow digits and one decimal point
+    const filtered = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    setWeightStr(filtered);
+    // Also update live for BMI preview
+    const val = parseFloat(filtered);
+    if (!isNaN(val) && val > 0) {
+      update('weightKg', data.weightUnit === 'lbs' ? Math.round((val / 2.20462) * 10) / 10 : Math.round(val * 10) / 10);
+    }
   };
 
   const updateHeightFromFtIn = (ft: number, inches: number) => {
@@ -1064,8 +1080,10 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
             <input
               type="text"
               inputMode="decimal"
-              value={displayWeight}
-              onChange={e => setWeight(e.target.value)}
+              value={weightStr}
+              onChange={e => handleWeightChange(e.target.value)}
+              onBlur={commitWeight}
+              placeholder="0"
               className="vitallity-input w-28"
               data-testid="input-weight"
             />
@@ -1084,6 +1102,8 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
             </div>
           </div>
         )}
+        {/* Spacer so BMI card doesn't overlap the Continue button */}
+        <div className="h-20" />
       </div>
     </div>
   );
