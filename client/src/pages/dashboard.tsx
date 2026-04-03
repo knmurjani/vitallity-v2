@@ -32,8 +32,23 @@ import {
   Moon,
   CloudSun,
   FileText,
+  Scale,
+  Sparkles,
+  Send,
+  TrendingUp,
 } from "lucide-react";
 import ChatSheet from "@/components/chat-sheet";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  ReferenceLine,
+} from "recharts";
 
 const LEVELS = [
   { name: "Beginner", minPoints: 0, color: "#9CA3AF" },
@@ -134,6 +149,7 @@ export default function Dashboard() {
   const [quickMood, setQuickMood] = useState(0);
   const [stepsInput, setStepsInput] = useState(false);
   const [stepsValue, setStepsValue] = useState("");
+  const [checkInHistory, setCheckInHistory] = useState<any[]>([]);
 
   useEffect(() => {
     authFetch("GET", "/api/dashboard")
@@ -171,6 +187,14 @@ export default function Dashboard() {
       })
       .catch(() => {})
       .finally(() => setBriefingLoading(false));
+
+    // Fetch 30 days of check-in history for visualizations
+    authFetch("GET", "/api/checkins?limit=30")
+      .then((res) => res.json())
+      .then((d) => {
+        if (Array.isArray(d.checkIns)) setCheckInHistory(d.checkIns);
+      })
+      .catch(() => {});
   }, [authFetch]);
 
   const profile = data?.profile;
@@ -200,6 +224,72 @@ export default function Dashboard() {
 
   const level = getLevel(totalPoints);
   const TimeIcon = getTimeIcon();
+
+  // --- Visualization data ---
+  // Weight trend: from check-in history with weight
+  const weightTrendData = checkInHistory
+    .filter((c: any) => c.weight)
+    .map((c: any) => ({
+      date: c.date ? c.date.slice(5) : "", // MM-DD
+      weight: c.weight / 10,
+    }))
+    .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+  // Also include recent check-ins from dashboard data
+  const recentWithWeight = recentCheckIns
+    .filter((c: any) => c.weight)
+    .map((c: any) => ({
+      date: c.date ? c.date.slice(5) : "",
+      weight: c.weight / 10,
+    }));
+
+  const allWeightData = [...weightTrendData];
+  recentWithWeight.forEach((r) => {
+    if (!allWeightData.find((w) => w.date === r.date)) allWeightData.push(r);
+  });
+  allWeightData.sort((a, b) => a.date.localeCompare(b.date));
+
+  // Mood sparkline: last 7 days from check-in history
+  const last7Days = checkInHistory
+    .filter((c: any) => c.mood)
+    .slice(-7)
+    .map((c: any) => ({
+      date: c.date ? c.date.slice(5) : "",
+      mood: c.mood,
+    }));
+
+  // Also merge recent check-ins for mood
+  const recentWithMood = recentCheckIns
+    .filter((c: any) => c.mood)
+    .slice(0, 7)
+    .map((c: any) => ({ date: c.date ? c.date.slice(5) : "", mood: c.mood }));
+
+  const moodData = last7Days.length > 0 ? last7Days : recentWithMood;
+
+  // Weekly macros: average protein/carbs/fat from check-ins with nutrition data
+  const logsWithNutrition = checkInHistory.filter(
+    (c: any) => (c.totalProtein || 0) + (c.totalCarbs || 0) + (c.totalFat || 0) > 0
+  );
+  let macroSummary: { protein: number; carbs: number; fat: number } | null = null;
+  if (logsWithNutrition.length > 0) {
+    const avgProtein = logsWithNutrition.reduce((s: number, c: any) => s + (c.totalProtein || 0), 0) / logsWithNutrition.length;
+    const avgCarbs = logsWithNutrition.reduce((s: number, c: any) => s + (c.totalCarbs || 0), 0) / logsWithNutrition.length;
+    const avgFat = logsWithNutrition.reduce((s: number, c: any) => s + (c.totalFat || 0), 0) / logsWithNutrition.length;
+    const total = avgProtein + avgCarbs + avgFat;
+    if (total > 0) {
+      macroSummary = {
+        protein: Math.round((avgProtein / total) * 100),
+        carbs: Math.round((avgCarbs / total) * 100),
+        fat: Math.round((avgFat / total) * 100),
+      };
+    }
+  }
+
+  // Is new user? (0 check-ins)
+  const isNewUser = stats.checkInCount === 0;
+
+  // Quick start: user has 0 goals set (may have used quick start)
+  const needsGoals = goals.length === 0 && !isNewUser;
 
   const addWater = () => {
     setWaterToday(w => w + 250);
@@ -271,16 +361,30 @@ export default function Dashboard() {
 
           {/* Stat tiles */}
           <div className="grid grid-cols-4 gap-2">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center" data-testid="weight-stat">
               <p className="text-white/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Weight</p>
-              <p className="text-white font-display text-base font-bold">
-                {displayWeight || "--"}
-                <span className="text-white/50 text-[10px] font-body"> kg</span>
-              </p>
+              {displayWeight ? (
+                <p className="text-white font-display text-base font-bold">
+                  {displayWeight}
+                  <span className="text-white/50 text-[10px] font-body"> kg</span>
+                </p>
+              ) : (
+                <div className="flex flex-col items-center gap-0.5">
+                  <Scale className="w-3.5 h-3.5 text-white/40" />
+                  <p className="text-white/50 text-[9px] leading-tight">Log weigh-in</p>
+                </div>
+              )}
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center" data-testid="checkins-stat">
               <p className="text-white/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Check-ins</p>
-              <p className="text-white font-display text-base font-bold">{stats.checkInCount}</p>
+              {stats.checkInCount > 0 ? (
+                <p className="text-white font-display text-base font-bold">{stats.checkInCount}</p>
+              ) : (
+                <div className="flex flex-col items-center gap-0.5">
+                  <Sparkles className="w-3.5 h-3.5 text-white/40" />
+                  <p className="text-white/50 text-[9px] leading-tight">First unlocks</p>
+                </div>
+              )}
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
               <p className="text-white/50 text-[10px] font-semibold uppercase tracking-wider mb-1">Milestones</p>
@@ -324,6 +428,80 @@ export default function Dashboard() {
 
       {/* Body content */}
       <div className="max-w-[560px] mx-auto px-5 py-6 space-y-5 pb-24">
+
+        {/* Getting Started card (new users only) */}
+        {isNewUser && (
+          <div
+            className="vitallity-card border-l-4"
+            style={{ borderLeftColor: "#C4815C" }}
+            data-testid="getting-started-card"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-[#C4815C]" />
+              <p className="font-display text-sm font-bold text-foreground">Getting Started</p>
+            </div>
+            <p className="text-xs text-text-mid mb-4">Complete these three steps to unlock your personalized journey</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => setLocation("/daily-log")}
+                className="w-full flex items-center gap-3 p-3 rounded-[14px] bg-primary/5 hover:bg-primary/10 transition-colors text-left"
+                data-testid="gs-checkin"
+              >
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <ClipboardList className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Log your first check-in</p>
+                <MoveRight className="w-4 h-4 text-text-light ml-auto" />
+              </button>
+              <button
+                onClick={() => setLocation("/health-records")}
+                className="w-full flex items-center gap-3 p-3 rounded-[14px] bg-primary/5 hover:bg-primary/10 transition-colors text-left"
+                data-testid="gs-health-records"
+              >
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileText className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Upload a health report</p>
+                <MoveRight className="w-4 h-4 text-text-light ml-auto" />
+              </button>
+              <button
+                onClick={() => setLocation("/settings")}
+                className="w-full flex items-center gap-3 p-3 rounded-[14px] bg-primary/5 hover:bg-primary/10 transition-colors text-left"
+                data-testid="gs-telegram"
+              >
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Send className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Connect Telegram for reminders</p>
+                <MoveRight className="w-4 h-4 text-text-light ml-auto" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Complete wellness plan (quick start users) */}
+        {needsGoals && (
+          <div
+            className="vitallity-card border-l-4"
+            style={{ borderLeftColor: "#C4815C" }}
+            data-testid="complete-wellness-plan-card"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-4 h-4 text-[#C4815C]" />
+              <p className="font-display text-sm font-bold text-foreground">Complete Your Wellness Plan</p>
+            </div>
+            <p className="text-xs text-text-mid mb-3">Set goals and milestones to get personalized guidance from your AI coach</p>
+            <button
+              onClick={() => setLocation("/settings")}
+              className="vitallity-btn-primary text-sm flex items-center gap-2"
+              data-testid="complete-plan-btn"
+            >
+              Set Goals Now
+              <MoveRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Morning Briefing */}
         {briefingLoading ? (
           <div className="glass-card p-5" data-testid="briefing-loading">
@@ -426,6 +604,108 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* Data Visualizations */}
+        {/* A. Weight Trend Line */}
+        {hasLoseWeightGoal && (
+          <div className="vitallity-card" data-testid="weight-trend-card">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Weight Trend</p>
+            </div>
+            {allWeightData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={120}>
+                <LineChart data={allWeightData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--text-light))" }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--text-light))" }} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+                    formatter={(val: number) => [`${val} kg`, "Weight"]}
+                  />
+                  {targetWeight && (
+                    <ReferenceLine y={targetWeight} stroke="#C4815C" strokeDasharray="4 3" strokeWidth={1.5} label={{ value: `Target: ${targetWeight}kg`, fill: "#C4815C", fontSize: 10, position: "right" }} />
+                  )}
+                  <Line type="monotone" dataKey="weight" stroke="#2C5E3F" strokeWidth={2} dot={{ r: 3, fill: "#2C5E3F", stroke: "#2C5E3F" }} activeDot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[80px] text-center">
+                <Scale className="w-6 h-6 text-muted-foreground mb-2" />
+                <p className="text-xs text-text-light">Log your weight to see trends</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* B. Mood Sparkline */}
+        <div className="vitallity-card" data-testid="mood-sparkline-card">
+          <div className="flex items-center gap-2 mb-2">
+            <Smile className="w-4 h-4 text-[hsl(var(--gold))]" />
+            <p className="text-sm font-semibold text-foreground">Mood (Last 7 Days)</p>
+          </div>
+          {moodData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={80}>
+              <AreaChart data={moodData} margin={{ top: 4, right: 4, bottom: 0, left: -30 }}>
+                <defs>
+                  <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2C5E3F" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#2C5E3F" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Tooltip
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+                  formatter={(val: number) => [`${val}/10`, "Mood"]}
+                />
+                <Area type="monotone" dataKey="mood" stroke="#2C5E3F" strokeWidth={2} fill="url(#moodGrad)" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[60px] text-center">
+              <p className="text-xs text-text-light">Track your mood to see patterns</p>
+            </div>
+          )}
+        </div>
+
+        {/* C. Weekly Macro Summary */}
+        <div className="vitallity-card" data-testid="macro-summary-card">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-[hsl(var(--accent))]" />
+            <p className="text-sm font-semibold text-foreground">Weekly Macros (Avg)</p>
+          </div>
+          {macroSummary ? (
+            <div className="space-y-2">
+              <div className="w-full h-6 flex rounded-full overflow-hidden">
+                <div className="h-full bg-primary flex items-center justify-center transition-all" style={{ width: `${macroSummary.protein}%` }}>
+                  {macroSummary.protein >= 15 && <span className="text-[9px] font-bold text-white">{macroSummary.protein}%</span>}
+                </div>
+                <div className="h-full bg-[hsl(var(--accent))] flex items-center justify-center transition-all" style={{ width: `${macroSummary.carbs}%` }}>
+                  {macroSummary.carbs >= 15 && <span className="text-[9px] font-bold text-white">{macroSummary.carbs}%</span>}
+                </div>
+                <div className="h-full bg-[hsl(var(--gold))] flex items-center justify-center transition-all" style={{ width: `${macroSummary.fat}%` }}>
+                  {macroSummary.fat >= 15 && <span className="text-[9px] font-bold text-white">{macroSummary.fat}%</span>}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                  <span className="text-[11px] text-text-mid">Protein {macroSummary.protein}%</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--accent))]" />
+                  <span className="text-[11px] text-text-mid">Carbs {macroSummary.carbs}%</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--gold))]" />
+                  <span className="text-[11px] text-text-mid">Fat {macroSummary.fat}%</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[60px] text-center">
+              <p className="text-xs text-text-light">Log meals to see your nutrition breakdown</p>
+            </div>
+          )}
+        </div>
 
         {/* Action CTA Cards */}
         <div className="grid grid-cols-2 gap-3">

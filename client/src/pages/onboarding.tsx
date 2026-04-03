@@ -10,7 +10,7 @@ import {
   Clock, TrendingUp, Flame, Footprints, Moon, Dumbbell, Leaf,
   ChevronDown, ChevronUp, Pencil,
   Brain, Eye, Shield, Zap, BarChart2, RefreshCw, ChevronRight,
-  User, ListChecks,
+  User, ListChecks, Send, MessageCircle, Utensils, Sheet,
 } from "lucide-react";
 
 // ─── Why We Ask Tooltip ────────────────────────────────────
@@ -45,8 +45,10 @@ const PHASES = [
   { label: "Body & Movement", steps: [3, 4] },
   { label: "Food & Lifestyle", steps: [5, 6] },
   { label: "What Worked", steps: [7] },
-  { label: "Goals & Plan", steps: [8, 9, 10, 11, 12] },
+  { label: "Goals & Plan", steps: [8, 9, 10, 11, 12, 13] },
 ];
+
+const TOTAL_STEPS = 13;
 
 function getPhaseForStep(step: number) {
   for (let i = 0; i < PHASES.length; i++) {
@@ -471,7 +473,8 @@ const ENCOURAGING_SUBTITLES: Record<number, string> = {
   4: "Halfway there! Your exercise profile helps us plan smarter",
   7: "Nearly there -- your AI health summary is next",
   8: "We're analyzing everything you've shared",
-  12: "You did it! Your personalized journey starts now",
+  12: "Almost there -- connect your tools for a seamless experience",
+  13: "You did it! Your personalized journey starts now",
 };
 
 export default function Onboarding() {
@@ -491,7 +494,7 @@ export default function Onboarding() {
     authFetch("GET", "/api/onboarding/progress")
       .then(res => res.json())
       .then(progress => {
-        if (progress.step) setStep(Math.min(progress.step, 12));
+        if (progress.step) setStep(Math.min(progress.step, TOTAL_STEPS));
         const d = progress.data;
         if (d?.profile) {
           const p = d.profile;
@@ -654,6 +657,10 @@ export default function Onboarding() {
           // AI Health Summary screen - no save needed, just advance
           body = null;
           break;
+        case 12:
+          // Integrations screen - no save needed, just advance
+          body = null;
+          break;
         case 9:
           body = {
             goals: data.goals.map(g => ({ goalType: g })),
@@ -671,7 +678,7 @@ export default function Onboarding() {
         case 11:
           body = { milestones: data.milestones };
           break;
-        case 12: {
+        case 13: {
           const completeRes = await authFetch("POST", "/api/onboarding/complete");
           const completeData = await completeRes.json();
           if (completeData.newBadges?.length > 0) {
@@ -689,7 +696,7 @@ export default function Onboarding() {
         await authFetch("POST", `/api/onboarding/step/${step}`, body);
       }
 
-      if (step < 12) {
+      if (step < TOTAL_STEPS) {
         const nextStep = step + 1;
         const currentPhaseIdx = getPhaseForStep(step);
         const nextPhaseIdx = getPhaseForStep(nextStep);
@@ -701,6 +708,26 @@ export default function Onboarding() {
       }
     } catch (err) {
       console.error("Save error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Quick Start: skip goals/milestones and complete onboarding immediately
+  const quickStartOnboarding = async () => {
+    setSaving(true);
+    try {
+      const completeRes = await authFetch("POST", "/api/onboarding/complete");
+      const completeData = await completeRes.json();
+      if (completeData.newBadges?.length > 0) {
+        const badge = completeData.newBadges[0];
+        setPhaseCelebration(`${badge.name} -- +${badge.pointsAwarded} pts`);
+        await new Promise(r => setTimeout(r, 1500));
+        setPhaseCelebration(null);
+      }
+      await refreshUser();
+    } catch (err) {
+      console.error("Quick start error:", err);
     } finally {
       setSaving(false);
     }
@@ -755,13 +782,13 @@ export default function Onboarding() {
         <div className="h-[2px] bg-border rounded-full mb-2" data-testid="step-progress">
           <div
             className="h-full bg-primary rounded-full transition-all duration-500"
-            style={{ width: `${(step / 12) * 100}%` }}
+            style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
           />
         </div>
 
         {/* Step counter with time estimate */}
         <p className="text-[11px] text-muted-foreground mb-1" data-testid="step-counter">
-          Step {step} of 12 {step < 12 ? `· about ${Math.max(1, Math.ceil((12 - step) * 0.75))} min left` : "· almost done!"}
+          Step {step} of {TOTAL_STEPS} {step < TOTAL_STEPS ? `· about ${Math.max(1, Math.ceil((TOTAL_STEPS - step) * 0.75))} min left` : "· almost done!"}
         </p>
 
         {/* Encouraging subtitle */}
@@ -799,49 +826,76 @@ export default function Onboarding() {
         {step === 9 && <Screen9Goals data={data} update={update} bmi={bmi} healthSummary={healthSummary} />}
         {step === 10 && <Screen10 data={data} update={update} />}
         {step === 11 && <Screen11Milestones data={data} update={update} />}
-        {step === 12 && <Screen12Review data={data} bmi={bmi} bmiCategory={bmiCategory} />}
+        {step === 12 && <Screen12Integrations authFetch={authFetch} />}
+        {step === 13 && <Screen13Review data={data} bmi={bmi} bmiCategory={bmiCategory} />}
       </div>
 
       {/* Bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-5 py-4">
-        <div className="max-w-[560px] mx-auto flex gap-3">
-          {step > 1 && (
-            <button
-              type="button"
-              onClick={() => setStep(step - 1)}
-              className="vitallity-btn-ghost flex items-center gap-2"
-              data-testid="onboarding-back"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </button>
+        <div className="max-w-[560px] mx-auto">
+          {/* Step 8: two choices */}
+          {step === 8 ? (
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={saveStep}
+                disabled={saving}
+                className="vitallity-btn-primary flex items-center justify-center gap-2"
+                data-testid="onboarding-continue-setup"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                  <>
+                    Continue Setup
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={quickStartOnboarding}
+                disabled={saving}
+                className="vitallity-btn-ghost text-sm flex items-center justify-center gap-2"
+                data-testid="onboarding-quick-start"
+              >
+                Quick Start -- I'll set goals later
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setStep(step - 1)}
+                  className="vitallity-btn-ghost flex items-center gap-2"
+                  data-testid="onboarding-back"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={saveStep}
+                disabled={saving || !canContinue}
+                className="vitallity-btn-primary flex-1 flex items-center justify-center gap-2"
+                data-testid="onboarding-continue"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : step === TOTAL_STEPS ? (
+                  <>
+                    Begin My Journey
+                    <Sparkles className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={saveStep}
-            disabled={saving || !canContinue}
-            className="vitallity-btn-primary flex-1 flex items-center justify-center gap-2"
-            data-testid="onboarding-continue"
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : step === 12 ? (
-              <>
-                Begin My Journey
-                <Sparkles className="w-4 h-4" />
-              </>
-            ) : step === 8 ? (
-              <>
-                Continue to Goals
-                <ArrowRight className="w-4 h-4" />
-              </>
-            ) : (
-              <>
-                Continue
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
         </div>
       </div>
     </div>
@@ -3211,12 +3265,173 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
           Add milestone
         </button>
       </div>
+
+      {/* How Points Work */}
+      <div className="vitallity-card mt-6" data-testid="points-explainer">
+        <div className="flex items-center gap-2 mb-3">
+          <Zap className="w-4 h-4 text-[hsl(var(--gold))]" />
+          <p className="text-sm font-semibold text-foreground">How Points Work</p>
+        </div>
+        <div className="space-y-2">
+          {[
+            { label: "Complete profile", pts: "+100 pts" },
+            { label: "Daily check-in", pts: "+10 pts" },
+            { label: "7-day streak", pts: "+50 pts" },
+            { label: "Upload health report", pts: "+25 pts" },
+            { label: "Hit a milestone", pts: "+75 pts" },
+          ].map(item => (
+            <div key={item.label} className="flex items-center justify-between">
+              <p className="text-xs text-text-mid">{item.label}</p>
+              <span className="text-xs font-semibold text-[hsl(var(--gold))]">{item.pts}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-xs text-text-light">Rewards Store coming soon -- redeem points for premium features and wellness products</p>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── Screen 12: Journey Review ───────────────────────────────
-function Screen12Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi: number; bmiCategory: string }) {
+// ─── Screen 12: Integrations ────────────────────────────────────────────────
+function Screen12Integrations({ authFetch }: { authFetch: (method: string, url: string, body?: any) => Promise<Response> }) {
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const [sheetsLoading, setSheetsLoading] = useState(false);
+
+  const connectTelegram = async () => {
+    setTelegramLoading(true);
+    try {
+      const res = await authFetch("POST", "/api/telegram/generate-link");
+      const d = await res.json();
+      if (d.deepLink) window.open(d.deepLink, "_blank");
+    } catch {} finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  const connectSheets = async () => {
+    setSheetsLoading(true);
+    try {
+      const res = await authFetch("GET", "/api/google-sheets/auth-url");
+      const d = await res.json();
+      if (d.url) window.open(d.url, "_blank");
+    } catch {} finally {
+      setSheetsLoading(false);
+    }
+  };
+
+  return (
+    <div data-testid="screen-12-integrations" className="animate-fade-in-up">
+      <h2 className="font-display text-2xl font-bold mb-1">Power Up Your Journey</h2>
+      <p className="text-text-light text-sm mb-6">Connect your tools for a seamless experience</p>
+
+      <div className="space-y-3">
+        {/* Telegram */}
+        <div className="vitallity-card">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-9 h-9 rounded-[10px] bg-primary/10 flex items-center justify-center shrink-0">
+              <Send className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Telegram</p>
+              <p className="text-xs text-text-mid mt-0.5">Daily reminders and check-ins without opening the app</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-text-light mb-3 flex-wrap">
+            <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">1</span>
+            <span>Tap Connect</span>
+            <span className="text-border mx-1">-</span>
+            <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">2</span>
+            <span>Open in Telegram</span>
+            <span className="text-border mx-1">-</span>
+            <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">3</span>
+            <span>Press Start</span>
+          </div>
+          <button
+            onClick={connectTelegram}
+            disabled={telegramLoading}
+            className="vitallity-btn-primary text-sm flex items-center gap-2"
+            data-testid="connect-telegram-btn"
+          >
+            {telegramLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Connect Telegram
+          </button>
+        </div>
+
+        {/* Google Sheets */}
+        <div className="vitallity-card">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-9 h-9 rounded-[10px] bg-primary/10 flex items-center justify-center shrink-0">
+              <Sheet className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Google Sheets</p>
+              <p className="text-xs text-text-mid mt-0.5">Auto-export your logs to a spreadsheet</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-text-light mb-3 flex-wrap">
+            <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">1</span>
+            <span>Tap Connect</span>
+            <span className="text-border mx-1">-</span>
+            <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">2</span>
+            <span>Sign in with Google</span>
+            <span className="text-border mx-1">-</span>
+            <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">3</span>
+            <span>Allow access</span>
+          </div>
+          <button
+            onClick={connectSheets}
+            disabled={sheetsLoading}
+            className="vitallity-btn-primary text-sm flex items-center gap-2"
+            data-testid="connect-sheets-btn"
+          >
+            {sheetsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sheet className="w-4 h-4" />}
+            Connect Sheets
+          </button>
+        </div>
+
+        {/* Coming Soon divider */}
+        <div className="relative flex items-center gap-3 py-1">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-[11px] font-semibold text-text-light uppercase tracking-wider">Coming Soon</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
+        {/* Coming Soon items */}
+        <div className="space-y-2 opacity-60">
+          <div className="vitallity-card p-4 flex items-center gap-3">
+            <MessageCircle className="w-5 h-5 text-text-light shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">WhatsApp</p>
+              <p className="text-xs text-text-mid">Message-based check-ins</p>
+            </div>
+            <span className="text-[10px] font-semibold bg-muted text-text-light rounded-full px-2 py-0.5">Soon</span>
+          </div>
+          <div className="vitallity-card p-4 flex items-center gap-3">
+            <Utensils className="w-5 h-5 text-text-light shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">MyFitnessPal</p>
+              <p className="text-xs text-text-mid">Sync nutrition data</p>
+            </div>
+            <span className="text-[10px] font-semibold bg-muted text-text-light rounded-full px-2 py-0.5">Soon</span>
+          </div>
+          <div className="vitallity-card p-4 flex items-center gap-3">
+            <Activity className="w-5 h-5 text-text-light shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Health Trackers</p>
+              <p className="text-xs text-text-mid">Apple Health, Fitbit, Garmin</p>
+            </div>
+            <span className="text-[10px] font-semibond bg-muted text-text-light rounded-full px-2 py-0.5">Soon</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 13: Journey Review ───────────────────────────────
+function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi: number; bmiCategory: string }) {
   const scoreColor = (val: number) => {
     if (val <= 4) return "text-rose";
     if (val <= 7) return "text-gold";

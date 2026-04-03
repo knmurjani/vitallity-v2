@@ -32,6 +32,8 @@ import {
   Watch,
   Utensils,
   Plug,
+  Sun,
+  Moon,
 } from "lucide-react";
 import AppTour from "@/components/app-tour";
 
@@ -127,6 +129,21 @@ export default function Settings() {
 
   // App Tour replay
   const [showTour, setShowTour] = useState(false);
+
+  // Dark mode
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark") || window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  const toggleDarkMode = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      if (next) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+      return next;
+    });
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -354,6 +371,34 @@ export default function Settings() {
       </div>
 
       <div className="max-w-[560px] mx-auto px-5 py-6 space-y-3">
+
+        {/* Dark Mode Toggle */}
+        <div className="glass-card p-4 flex items-center justify-between" data-testid="dark-mode-toggle-card">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+              {isDark ? <Moon className="w-4.5 h-4.5 text-primary" /> : <Sun className="w-4.5 h-4.5 text-primary" />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">{isDark ? "Dark Mode" : "Light Mode"}</p>
+              <p className="text-xs text-text-mid">Switch appearance</p>
+            </div>
+          </div>
+          <button
+            onClick={toggleDarkMode}
+            className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
+              isDark ? "bg-primary" : "bg-border"
+            }`}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            data-testid="dark-mode-toggle"
+          >
+            <div
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-300 ${
+                isDark ? "translate-x-6" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+
         {/* 1. Basic Info Section */}
         <div className="glass-card overflow-hidden" data-testid="basic-info-section">
           <button
