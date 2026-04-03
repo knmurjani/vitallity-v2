@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Phone, Shield } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, Loader2, Phone, Shield, ChevronRight } from "lucide-react";
 import heroAuth from "@assets/hero-auth.jpg";
 
 declare const google: any;
@@ -16,9 +16,10 @@ function GoogleIcon() {
   );
 }
 
-function VitallityLogo() {
+function VitallityLogo({ size = "normal" }: { size?: "normal" | "small" }) {
+  const cls = size === "small" ? "w-7 h-7" : "w-11 h-11";
   return (
-    <svg viewBox="0 0 44 44" className="w-11 h-11" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 44 44" className={cls} fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 38V20" />
       <path d="M22 20C22 20 14 14 14 8C14 5 16 4 18 4C20 4 22 7 22 10" />
       <path d="M22 20C22 20 30 14 30 8C30 5 28 4 26 4C24 4 22 7 22 10" />
@@ -30,7 +31,7 @@ function VitallityLogo() {
 
 export default function AuthPage() {
   const { login, signup, loginWithGoogle, sendPhoneOtp, verifyPhoneOtp } = useAuth();
-  const [authMethod, setAuthMethod] = useState<"main" | "phone" | "email">("main");
+  const [stage, setStage] = useState<"hero" | "options" | "phone" | "email">("hero");
 
   // Email auth state
   const [isLogin, setIsLogin] = useState(true);
@@ -184,6 +185,15 @@ export default function AuthPage() {
     setCountdown(0);
   };
 
+  const goBack = () => {
+    setError("");
+    if (stage === "options") setStage("hero");
+    else if (stage === "phone" || stage === "email") setStage("options");
+  };
+
+  // Is any panel open (not the hero)?
+  const panelOpen = stage !== "hero";
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden" data-testid="auth-page">
       {/* Full-bleed hero background */}
@@ -191,294 +201,351 @@ export default function AuthPage() {
         <img
           src={heroAuth}
           alt=""
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-700"
+          style={{ transform: panelOpen ? "scale(1.03)" : "scale(1)" }}
           aria-hidden="true"
         />
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+        {/* Subtle vignette overlay -- stronger when panel is open */}
+        <div
+          className="absolute inset-0 transition-opacity duration-500"
+          style={{
+            background: panelOpen
+              ? "linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.15) 100%)"
+              : "linear-gradient(135deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.05) 100%)",
+          }}
+        />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-end px-5 pb-8 pt-20">
-        {/* Logo area at top */}
-        <div className="flex-1 flex flex-col items-center justify-center mb-8 animate-fade-in-up" data-testid="auth-logo">
-          <VitallityLogo />
-          <h1 className="font-display text-4xl font-bold text-white tracking-tight mt-3">
-            Vitallity
-          </h1>
-          <p className="text-white/70 text-sm mt-2 tracking-wide">Your personal wellness journey</p>
-        </div>
+      {/* Content layer */}
+      <div className="relative z-10 min-h-screen flex flex-col">
 
-        {/* Glass card */}
-        <div className="w-full max-w-[420px] glass-card p-6 animate-fade-in-up" style={{ animationDelay: "0.15s" }} data-testid="auth-card">
-
-          {/* Error message */}
-          {error && (
-            <div className="bg-rose-faded text-rose text-sm px-4 py-3 rounded-[14px] border border-rose/20 mb-4" data-testid="auth-error">
-              {error}
+        {/* ── HERO STATE: branding + Continue button ── */}
+        {stage === "hero" && (
+          <>
+            {/* Top-left branding */}
+            <div className="flex items-center gap-2.5 px-5 pt-6 animate-fade-in-up" data-testid="auth-logo">
+              <VitallityLogo size="small" />
+              <span className="font-display text-xl font-bold text-white tracking-tight">Vitallity</span>
             </div>
-          )}
 
-          {/* Main auth options */}
-          {authMethod === "main" && (
-            <div className="space-y-3">
-              {/* Google Sign-In */}
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Bottom area: tagline + Continue */}
+            <div className="px-5 pb-10 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+              <p className="text-white/90 text-lg font-display font-semibold leading-snug mb-1">
+                Your personal
+              </p>
+              <p className="text-white text-3xl font-display font-bold leading-tight mb-6 tracking-tight">
+                wellness journey
+              </p>
+
               <button
                 type="button"
-                onClick={handleGoogleClick}
-                disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl border border-border/50 bg-white text-foreground font-semibold text-sm hover:bg-white/90 transition-all active:scale-[0.98] disabled:opacity-50"
-                data-testid="google-signin-btn"
-                aria-label="Continue with Google"
+                onClick={() => setStage("options")}
+                className="group flex items-center gap-3 py-3.5 px-7 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white font-semibold text-sm tracking-wide hover:bg-white/25 transition-all active:scale-[0.97]"
+                data-testid="continue-btn"
+                aria-label="Continue to sign in"
               >
-                {googleLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <GoogleIcon />
-                    Continue with Google
-                  </>
-                )}
+                Continue
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
 
-              {/* Phone OTP */}
-              <button
-                type="button"
-                onClick={() => { setAuthMethod("phone"); setError(""); }}
-                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl border border-white/20 bg-white/10 text-foreground font-semibold text-sm hover:bg-white/20 transition-all active:scale-[0.98] backdrop-blur-sm"
-                data-testid="phone-auth-btn"
-                aria-label="Sign in with phone"
-              >
-                <Phone className="w-4.5 h-4.5" />
-                Continue with Phone
-              </button>
-
-              {/* Email */}
-              <button
-                type="button"
-                onClick={() => { setAuthMethod("email"); setError(""); }}
-                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl border border-white/20 bg-white/10 text-foreground font-semibold text-sm hover:bg-white/20 transition-all active:scale-[0.98] backdrop-blur-sm"
-                data-testid="email-auth-btn"
-                aria-label="Sign in with email"
-              >
-                <Mail className="w-4.5 h-4.5" />
-                Continue with Email
-              </button>
+              <p className="text-white/40 text-xs mt-4">
+                By continuing, you agree to Vitallity's terms of service.
+              </p>
             </div>
-          )}
+          </>
+        )}
 
-          {/* Phone auth */}
-          {authMethod === "phone" && (
-            <div data-testid="phone-auth-section">
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  type="button"
-                  onClick={() => { setAuthMethod("main"); setError(""); resetPhoneFlow(); }}
-                  className="text-text-mid hover:text-foreground transition-colors"
-                  aria-label="Back"
-                >
-                  <ArrowRight className="w-4 h-4 rotate-180" />
-                </button>
-                <p className="text-sm font-semibold text-foreground">Sign in with Phone</p>
-              </div>
+        {/* ── AUTH PANEL: slides in from left ── */}
+        {panelOpen && (
+          <div className="flex-1 flex flex-col px-5 pt-6 pb-8 animate-fade-in-up">
+            {/* Back button */}
+            <button
+              type="button"
+              onClick={goBack}
+              className="flex items-center gap-1.5 text-white/80 hover:text-white text-sm font-medium mb-6 w-fit transition-colors"
+              data-testid="auth-back"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
 
-              {!otpSent ? (
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <div className="flex items-center gap-1.5 px-3 py-2.5 bg-muted/50 rounded-xl border border-border text-sm text-foreground font-medium flex-shrink-0">
-                      +91
+            {/* Panel content */}
+            <div className="flex-1 flex flex-col justify-end max-w-[420px] w-full">
+
+              {/* ── OPTIONS: Google / Phone / Email ── */}
+              {stage === "options" && (
+                <div className="animate-fade-in-up">
+                  <h2 className="font-display text-2xl font-bold text-white mb-1.5 tracking-tight">Welcome</h2>
+                  <p className="text-white/60 text-sm mb-6">Sign in or create an account to continue</p>
+
+                  {error && (
+                    <div className="bg-rose-500/15 text-rose-200 text-sm px-4 py-3 rounded-2xl border border-rose-400/20 mb-4" data-testid="auth-error">
+                      {error}
                     </div>
-                    <input
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="Phone number"
-                      className="vitallity-input flex-1"
-                      data-testid="phone-input"
-                      aria-label="Phone number"
-                      autoFocus
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={phoneLoading || !phoneNumber.trim()}
-                    className="vitallity-btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
-                    data-testid="send-otp-btn"
-                    aria-label="Send verification code"
-                  >
-                    {phoneLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Shield className="w-4 h-4" />
-                        Send Code
-                      </>
-                    )}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-text-mid">
-                    Code sent to +91{phoneNumber.replace(/^\+91/, "")}
-                    <button type="button" onClick={resetPhoneFlow} className="text-primary font-semibold ml-2" aria-label="Change phone number">
-                      Change
+                  )}
+
+                  <div className="space-y-3">
+                    {/* Google */}
+                    <button
+                      type="button"
+                      onClick={handleGoogleClick}
+                      disabled={googleLoading}
+                      className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-white text-gray-800 font-semibold text-sm hover:bg-white/95 transition-all active:scale-[0.98] disabled:opacity-50 shadow-lg shadow-black/10"
+                      data-testid="google-signin-btn"
+                      aria-label="Continue with Google"
+                    >
+                      {googleLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <GoogleIcon />
+                          Continue with Google
+                        </>
+                      )}
                     </button>
+
+                    {/* Phone */}
+                    <button
+                      type="button"
+                      onClick={() => { setStage("phone"); setError(""); }}
+                      className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-white/12 backdrop-blur-md border border-white/20 text-white font-semibold text-sm hover:bg-white/20 transition-all active:scale-[0.98]"
+                      data-testid="phone-auth-btn"
+                      aria-label="Continue with Phone"
+                    >
+                      <Phone className="w-4.5 h-4.5" />
+                      Continue with Phone
+                    </button>
+
+                    {/* Email */}
+                    <button
+                      type="button"
+                      onClick={() => { setStage("email"); setError(""); }}
+                      className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-white/12 backdrop-blur-md border border-white/20 text-white font-semibold text-sm hover:bg-white/20 transition-all active:scale-[0.98]"
+                      data-testid="email-auth-btn"
+                      aria-label="Continue with Email"
+                    >
+                      <Mail className="w-4.5 h-4.5" />
+                      Continue with Email
+                    </button>
+                  </div>
+
+                  <p className="text-white/35 text-xs mt-5">
+                    By continuing, you agree to Vitallity's terms of service.
                   </p>
-                  <div className="flex justify-center gap-2.5" data-testid="otp-input-group">
-                    {otpDigits.map((digit, i) => (
-                      <input
-                        key={i}
-                        ref={(el) => { otpRefs.current[i] = el; }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(i, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                        className="w-12 h-12 text-center text-lg font-semibold rounded-xl border border-border bg-card text-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                        aria-label={`Digit ${i + 1}`}
-                        data-testid={`otp-digit-${i}`}
-                      />
-                    ))}
-                  </div>
-                  <div className="text-center">
-                    {countdown > 0 ? (
-                      <p className="text-xs text-text-mid">
-                        Resend in <span className="font-semibold text-foreground">{countdown}s</span>
-                      </p>
-                    ) : (
-                      <button type="button" onClick={handleSendOtp} className="text-xs font-semibold text-primary" aria-label="Resend code">
-                        Resend Code
+                </div>
+              )}
+
+              {/* ── PHONE AUTH ── */}
+              {stage === "phone" && (
+                <div className="animate-fade-in-up" data-testid="phone-auth-section">
+                  <h2 className="font-display text-2xl font-bold text-white mb-1.5 tracking-tight">Phone Sign In</h2>
+                  <p className="text-white/60 text-sm mb-6">We'll send you a verification code</p>
+
+                  {error && (
+                    <div className="bg-rose-500/15 text-rose-200 text-sm px-4 py-3 rounded-2xl border border-rose-400/20 mb-4" data-testid="auth-error">
+                      {error}
+                    </div>
+                  )}
+
+                  {!otpSent ? (
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <div className="flex items-center gap-1.5 px-3.5 py-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-sm text-white font-medium flex-shrink-0">
+                          +91
+                        </div>
+                        <input
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          placeholder="Phone number"
+                          className="flex-1 px-4 py-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-white placeholder:text-white/40 text-sm outline-none focus:border-white/40 transition-colors"
+                          data-testid="phone-input"
+                          aria-label="Phone number"
+                          autoFocus
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={phoneLoading || !phoneNumber.trim()}
+                        className="w-full py-3.5 rounded-2xl bg-white text-gray-800 font-semibold text-sm hover:bg-white/95 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                        data-testid="send-otp-btn"
+                        aria-label="Send verification code"
+                      >
+                        {phoneLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Shield className="w-4 h-4" />
+                            Send Code
+                          </>
+                        )}
                       </button>
-                    )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-xs text-white/60">
+                        Code sent to +91{phoneNumber.replace(/^\+91/, "")}
+                        <button type="button" onClick={resetPhoneFlow} className="text-white font-semibold ml-2" aria-label="Change phone number">
+                          Change
+                        </button>
+                      </p>
+                      <div className="flex justify-center gap-2.5" data-testid="otp-input-group">
+                        {otpDigits.map((digit, i) => (
+                          <input
+                            key={i}
+                            ref={(el) => { otpRefs.current[i] = el; }}
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={1}
+                            value={digit}
+                            onChange={(e) => handleOtpChange(i, e.target.value)}
+                            onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                            className="w-12 h-12 text-center text-lg font-semibold rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white focus:border-white/50 focus:ring-1 focus:ring-white/30 outline-none transition-colors"
+                            aria-label={`Digit ${i + 1}`}
+                            data-testid={`otp-digit-${i}`}
+                          />
+                        ))}
+                      </div>
+                      <div className="text-center">
+                        {countdown > 0 ? (
+                          <p className="text-xs text-white/50">
+                            Resend in <span className="font-semibold text-white/80">{countdown}s</span>
+                          </p>
+                        ) : (
+                          <button type="button" onClick={handleSendOtp} className="text-xs font-semibold text-white/80 hover:text-white" aria-label="Resend code">
+                            Resend Code
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={phoneLoading || otpDigits.join("").length !== 6}
+                        className="w-full py-3.5 rounded-2xl bg-white text-gray-800 font-semibold text-sm hover:bg-white/95 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                        data-testid="verify-otp-btn"
+                        aria-label="Verify code"
+                      >
+                        {phoneLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            Verify
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── EMAIL AUTH ── */}
+              {stage === "email" && (
+                <div className="animate-fade-in-up" data-testid="email-auth-section">
+                  <h2 className="font-display text-2xl font-bold text-white mb-1.5 tracking-tight">
+                    {isLogin ? "Welcome Back" : "Create Account"}
+                  </h2>
+                  <p className="text-white/60 text-sm mb-5">
+                    {isLogin ? "Sign in to continue your journey" : "Start your wellness journey today"}
+                  </p>
+
+                  {error && (
+                    <div className="bg-rose-500/15 text-rose-200 text-sm px-4 py-3 rounded-2xl border border-rose-400/20 mb-4" data-testid="auth-error">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Toggle */}
+                  <div className="flex bg-white/10 backdrop-blur-md rounded-full p-1 mb-5 border border-white/10" data-testid="auth-toggle">
+                    <button
+                      type="button"
+                      onClick={() => { setIsLogin(true); setError(""); }}
+                      className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all ${
+                        isLogin ? "bg-white text-gray-800 shadow-sm" : "text-white/60 hover:text-white"
+                      }`}
+                      data-testid="auth-login-tab"
+                    >
+                      Log In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setIsLogin(false); setError(""); }}
+                      className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all ${
+                        !isLogin ? "bg-white text-gray-800 shadow-sm" : "text-white/60 hover:text-white"
+                      }`}
+                      data-testid="auth-signup-tab"
+                    >
+                      Sign Up
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleVerifyOtp}
-                    disabled={phoneLoading || otpDigits.join("").length !== 6}
-                    className="vitallity-btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
-                    data-testid="verify-otp-btn"
-                    aria-label="Verify code"
-                  >
-                    {phoneLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        Verify
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
+
+                  <form onSubmit={handleEmailSubmit} className="space-y-4" data-testid="auth-form">
+                    <div>
+                      <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 block">Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          required
+                          className="w-full pl-11 pr-4 py-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-white placeholder:text-white/35 text-sm outline-none focus:border-white/40 transition-colors"
+                          data-testid="auth-email"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 block">Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder={isLogin ? "Enter password" : "Min. 8 characters"}
+                          required
+                          minLength={isLogin ? 1 : 8}
+                          className="w-full pl-11 pr-11 py-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-white placeholder:text-white/35 text-sm outline-none focus:border-white/40 transition-colors"
+                          data-testid="auth-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={emailLoading}
+                      className="w-full py-3.5 rounded-2xl bg-white text-gray-800 font-semibold text-sm hover:bg-white/95 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 mt-1"
+                      data-testid="auth-submit"
+                    >
+                      {emailLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          {isLogin ? "Log In" : "Create Account"}
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </form>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Email auth */}
-          {authMethod === "email" && (
-            <div data-testid="email-auth-section">
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  type="button"
-                  onClick={() => { setAuthMethod("main"); setError(""); }}
-                  className="text-text-mid hover:text-foreground transition-colors"
-                  aria-label="Back"
-                >
-                  <ArrowRight className="w-4 h-4 rotate-180" />
-                </button>
-                <p className="text-sm font-semibold text-foreground">Sign in with Email</p>
-              </div>
-
-              {/* Toggle */}
-              <div className="flex bg-muted/50 rounded-[100px] p-1 mb-5" data-testid="auth-toggle">
-                <button
-                  type="button"
-                  onClick={() => { setIsLogin(true); setError(""); }}
-                  className={`flex-1 py-2.5 text-sm font-semibold rounded-[100px] transition-all ${
-                    isLogin ? "bg-primary text-white shadow-sm" : "text-text-mid hover:text-foreground"
-                  }`}
-                  data-testid="auth-login-tab"
-                >
-                  Log In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsLogin(false); setError(""); }}
-                  className={`flex-1 py-2.5 text-sm font-semibold rounded-[100px] transition-all ${
-                    !isLogin ? "bg-primary text-white shadow-sm" : "text-text-mid hover:text-foreground"
-                  }`}
-                  data-testid="auth-signup-tab"
-                >
-                  Sign Up
-                </button>
-              </div>
-
-              <form onSubmit={handleEmailSubmit} className="space-y-4" data-testid="auth-form">
-                <div>
-                  <label className="vitallity-label">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      required
-                      className="vitallity-input pl-11"
-                      data-testid="auth-email"
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="vitallity-label">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={isLogin ? "Enter password" : "Min. 8 characters"}
-                      required
-                      minLength={isLogin ? 1 : 8}
-                      className="vitallity-input pl-11 pr-11"
-                      data-testid="auth-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light hover:text-text-mid"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  disabled={emailLoading}
-                  className="vitallity-btn-primary w-full flex items-center justify-center gap-2 mt-2"
-                  data-testid="auth-submit"
-                >
-                  {emailLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      {isLogin ? "Log In" : "Create Account"}
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-white/50 mt-5">
-          By continuing, you agree to Vitallity's terms of service.
-        </p>
+          </div>
+        )}
       </div>
     </div>
   );
