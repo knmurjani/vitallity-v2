@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth, useAuthFetch } from "@/hooks/use-auth";
 import { ChipGroup, Chip } from "@/components/ui/chip";
 import { RangeSlider } from "@/components/ui/range-slider";
@@ -7,6 +7,8 @@ import {
   ArrowLeft, ArrowRight, Loader2, X, Plus, Search,
   AlertTriangle, Info, Heart, Target, Sparkles, Check,
   Trash2, Watch, Activity,
+  Clock, TrendingUp, Flame, Footprints, Moon, Dumbbell, Leaf,
+  ChevronDown, ChevronUp, Pencil,
 } from "lucide-react";
 
 // ─── Why We Ask Tooltip ────────────────────────────────────
@@ -101,74 +103,96 @@ const snackingOptions = [
 ];
 
 // ─── Milestone Suggestions ───────────────────────────────────
-const MILESTONE_SUGGESTIONS: Record<string, { title: string; target: string; timeframe: string; steps: { weekNumber: number; description: string }[] }> = {
+const MILESTONE_SUGGESTIONS: Record<string, { title: string; target: string; timeframe: string; steps: { weekLabel: string; description: string; why: string }[]; phases?: { name: string; weeks: string; color: string }[] }> = {
   "Lose Weight": {
     title: "Lose first 2-3kg",
     target: "Reduce 2.5kg from current weight",
     timeframe: "1 month",
+    phases: [
+      { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+      { name: "Building", weeks: "Week 3-4", color: "accent" },
+    ],
     steps: [
-      { weekNumber: 1, description: "Track calories 5/7 days" },
-      { weekNumber: 2, description: "Walk 20 min daily" },
-      { weekNumber: 3, description: "Cut sugary drinks" },
-      { weekNumber: 4, description: "Reduce rice/bread by 30%" },
+      { weekLabel: "Week 1-2", description: "Track food intake 5/7 days and add a 20-min morning walk", why: "Awareness is the first lever -- you can't change what you don't measure" },
+      { weekLabel: "Week 3-4", description: "Cut sugary drinks, reduce rice/bread by 25%, and walk daily", why: "Simple swaps create a calorie deficit without feeling deprived" },
     ],
   },
   "Manage Pain": {
     title: "Reduce pain by 2 points",
     target: "Pain level 4 or below",
     timeframe: "1 month",
+    phases: [
+      { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+      { name: "Building", weeks: "Week 3-4", color: "accent" },
+    ],
     steps: [
-      { weekNumber: 1, description: "10 min stretching daily" },
-      { weekNumber: 2, description: "Track pain triggers" },
-      { weekNumber: 3, description: "Heat/cold therapy routine" },
-      { weekNumber: 4, description: "Assess improvement" },
+      { weekLabel: "Week 1-2", description: "10 min gentle stretching daily + track pain triggers in a journal", why: "Identifying triggers is the fastest path to relief" },
+      { weekLabel: "Week 3-4", description: "Heat/cold therapy routine + anti-inflammatory diet adjustments", why: "Physical and dietary interventions compound for faster pain reduction" },
     ],
   },
   "Build Strength": {
-    title: "Establish 3x/week routine",
+    title: "Establish a 3x/week routine",
     target: "12 sessions in 4 weeks",
     timeframe: "1 month",
+    phases: [
+      { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+      { name: "Building", weeks: "Week 3-4", color: "accent" },
+    ],
     steps: [
-      { weekNumber: 1, description: "2 sessions this week" },
-      { weekNumber: 2, description: "3 sessions this week" },
-      { weekNumber: 3, description: "Maintain 3 sessions" },
-      { weekNumber: 4, description: "Maintain 3 sessions" },
+      { weekLabel: "Week 1-2", description: "2x/week bodyweight: squats, push-ups, planks (20 min each)", why: "Starting below capacity builds the habit without burning out" },
+      { weekLabel: "Week 3-4", description: "3x/week, add resistance bands or light weights, track reps", why: "Progressive overload signals your body to grow stronger" },
     ],
   },
   "Better Sleep": {
     title: "Fix sleep schedule",
-    target: "Same time +-30min for 14 days",
+    target: "Same sleep time within 30 min for 14 days",
     timeframe: "2 weeks",
+    phases: [
+      { name: "Foundation", weeks: "Week 1", color: "primary" },
+      { name: "Building", weeks: "Week 2", color: "accent" },
+    ],
     steps: [
-      { weekNumber: 1, description: "Set consistent wake alarm" },
-      { weekNumber: 2, description: "No screens 30min before bed" },
+      { weekLabel: "Week 1", description: "Set a consistent wake alarm, no screens 30 min before bed", why: "Circadian rhythm is anchored by wake time, not sleep time" },
+      { weekLabel: "Week 2", description: "Add a 10-min wind-down routine: dim lights, reading, light stretching", why: "Rituals signal the brain that sleep is coming" },
     ],
   },
   "More Energy": {
     title: "Sustained energy above 6/10",
-    target: "7-day average energy >= 6",
+    target: "7-day average self-rated energy at 6 or above",
     timeframe: "2 weeks",
+    phases: [
+      { name: "Foundation", weeks: "Week 1", color: "primary" },
+      { name: "Building", weeks: "Week 2", color: "accent" },
+    ],
     steps: [
-      { weekNumber: 1, description: "7hrs sleep minimum + morning walk" },
-      { weekNumber: 2, description: "Hydration focus + maintain routine" },
+      { weekLabel: "Week 1", description: "Aim for 7+ hrs sleep, drink 2.5L water daily, 15-min morning walk", why: "Sleep and hydration are the two most underrated energy levers" },
+      { weekLabel: "Week 2", description: "Eat protein at each meal, reduce refined carbs, keep sleep routine", why: "Stable blood sugar prevents the afternoon energy crash" },
     ],
   },
   "Reduce Stress": {
-    title: "Daily breathing practice",
-    target: "14 consecutive days",
+    title: "Daily breathing and wind-down practice",
+    target: "14 consecutive days of stress practice",
     timeframe: "2 weeks",
+    phases: [
+      { name: "Foundation", weeks: "Week 1", color: "primary" },
+      { name: "Building", weeks: "Week 2", color: "accent" },
+    ],
     steps: [
-      { weekNumber: 1, description: "5 min box breathing daily" },
-      { weekNumber: 2, description: "Add evening wind-down routine" },
+      { weekLabel: "Week 1", description: "5 min box breathing daily (4s in, 4s hold, 4s out, 4s hold)", why: "Box breathing activates the parasympathetic nervous system within minutes" },
+      { weekLabel: "Week 2", description: "Add an evening wind-down routine: journal 3 things that went well", why: "Gratitude journaling rewires stress pathways over time" },
     ],
   },
   "Improve Blood Markers": {
-    title: "Baseline blood test",
-    target: "Get tested within 2 weeks",
+    title: "Baseline blood test and action plan",
+    target: "Complete blood panel and review with doctor",
     timeframe: "2 weeks",
+    phases: [
+      { name: "Foundation", weeks: "Week 1", color: "primary" },
+      { name: "Building", weeks: "Week 2", color: "accent" },
+    ],
     steps: [
-      { weekNumber: 1, description: "Book appointment + complete test" },
-      { weekNumber: 2, description: "Review results with doctor" },
+      { weekLabel: "Week 1", description: "Book and complete a comprehensive blood test (HbA1c, lipids, thyroid)", why: "You cannot improve what you haven't measured" },
+      { weekLabel: "Week 2", description: "Review results with your doctor and note target numbers", why: "Knowing your specific numbers creates a concrete goal to track" },
     ],
   },
 };
@@ -331,7 +355,8 @@ interface MilestoneData {
   title: string;
   target: string;
   timeframe: string;
-  steps: { weekNumber: number; description: string }[];
+  steps: { weekLabel: string; description: string; why: string }[];
+  phases?: { name: string; weeks: string; color: string }[];
 }
 
 interface OnboardingData {
@@ -515,7 +540,12 @@ export default function Onboarding() {
             ...prev,
             milestones: d.milestones.map((m: any) => ({
               title: m.title, target: m.target || "", timeframe: m.timeframe || "",
-              steps: m.steps?.map((s: any) => ({ weekNumber: s.weekNumber, description: s.description })) || [],
+              steps: m.steps?.map((s: any) => ({
+                weekLabel: s.weekLabel || `Week ${s.weekNumber || 1}`,
+                description: s.description || "",
+                why: s.why || "",
+              })) || [],
+              phases: m.phases || undefined,
             })),
           }));
         }
@@ -815,9 +845,14 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
     update("weightUnit", unit);
   };
 
-  const displayWeight = data.weightUnit === "lbs" ? Math.round(data.weightKg * 2.20462) : data.weightKg;
-  const setWeight = (val: number) => {
-    update("weightKg", data.weightUnit === "lbs" ? Math.round(val / 2.20462) : val);
+  const displayWeight = data.weightUnit === "lbs" ? (data.weightKg * 2.20462).toFixed(1).replace(/\.0$/, '') : String(data.weightKg).replace(/\.0$/, '');
+  const setWeight = (raw: string) => {
+    // Allow empty, digits, and one decimal point
+    if (raw === '' || raw === '.') { update("weightKg", 0); return; }
+    const cleaned = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    const val = parseFloat(cleaned);
+    if (isNaN(val)) return;
+    update("weightKg", data.weightUnit === "lbs" ? Math.round((val / 2.20462) * 10) / 10 : Math.round(val * 10) / 10);
   };
 
   const updateHeightFromFtIn = (ft: number, inches: number) => {
@@ -945,11 +980,10 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
           </div>
           <div className="flex items-center gap-2">
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={displayWeight}
-              onChange={e => setWeight(parseInt(e.target.value) || 0)}
-              min={data.weightUnit === "kg" ? 25 : 55}
-              max={data.weightUnit === "kg" ? 300 : 660}
+              onChange={e => setWeight(e.target.value)}
               className="vitallity-input w-28"
               data-testid="input-weight"
             />
@@ -1876,12 +1910,30 @@ function Screen8({ data, update, bmi }: {
   };
 
   const showWeightLoss = data.goals.includes("Lose Weight");
-  const displayTargetWeight = data.targetWeightUnit === "lbs"
-    ? Math.round(data.targetWeightKg * 2.20462)
-    : data.targetWeightKg;
+  const [targetWeightStr, setTargetWeightStr] = useState<string>(
+    data.targetWeightUnit === "lbs"
+      ? String(Math.round(data.targetWeightKg * 2.20462))
+      : String(data.targetWeightKg)
+  );
 
-  const setTargetWeight = (val: number) => {
-    update("targetWeightKg", data.targetWeightUnit === "lbs" ? Math.round(val / 2.20462) : val);
+  // Keep string in sync when unit toggles
+  useEffect(() => {
+    setTargetWeightStr(
+      data.targetWeightUnit === "lbs"
+        ? String(Math.round(data.targetWeightKg * 2.20462))
+        : String(data.targetWeightKg)
+    );
+  }, [data.targetWeightUnit]);
+
+  const handleTargetWeightChange = (raw: string) => {
+    // Allow digits and a single decimal point
+    if (/^\d*\.?\d*$/.test(raw)) {
+      setTargetWeightStr(raw);
+      const num = parseFloat(raw);
+      if (!isNaN(num) && num > 0) {
+        update("targetWeightKg", data.targetWeightUnit === "lbs" ? num / 2.20462 : num);
+      }
+    }
   };
 
   const weeksForTimeline = data.weightTimeline === "3 months" ? 12 : data.weightTimeline === "6 months" ? 24 : data.weightTimeline === "1 year" ? 52 : 0;
@@ -2001,10 +2053,12 @@ function Screen8({ data, update, bmi }: {
             <label className="vitallity-label">Weight Target</label>
             <div className="flex items-center gap-2">
               <input
-                type="number"
-                value={displayTargetWeight}
-                onChange={e => setTargetWeight(parseInt(e.target.value) || 0)}
+                type="text"
+                inputMode="decimal"
+                value={targetWeightStr}
+                onChange={e => handleTargetWeightChange(e.target.value)}
                 className="vitallity-input w-28"
+                placeholder="e.g. 72.5"
                 data-testid="input-target-weight"
               />
               <button
@@ -2130,12 +2184,31 @@ function Screen9({ data, update }: { data: OnboardingData; update: <K extends ke
           <p className="text-sm font-medium text-foreground mb-4">
             How long do your health efforts typically last before you fall off?
           </p>
-          <RangeSlider
-            value={data.consistencyHistory}
-            onChange={v => update("consistencyHistory", v)}
-            leftLabel="Days"
-            rightLabel="Months+"
-            testId="slider-consistency"
+          <ChipGroup
+            options={[
+              { label: "1-2 days" },
+              { label: "5-6 days" },
+              { label: "1 week" },
+              { label: "2 weeks" },
+              { label: "1 month" },
+              { label: "2-3 months" },
+              { label: "6+ months" },
+            ]}
+            selected={(() => {
+              const v = data.consistencyHistory;
+              if (v <= 1) return ["1-2 days"];
+              if (v <= 3) return ["5-6 days"];
+              if (v <= 4) return ["1 week"];
+              if (v <= 5) return ["2 weeks"];
+              if (v <= 6) return ["1 month"];
+              if (v <= 8) return ["2-3 months"];
+              if (v <= 10) return ["6+ months"];
+              return [];
+            })()}
+            onChange={vals => {
+              const map: Record<string, number> = { "1-2 days": 1, "5-6 days": 2, "1 week": 4, "2 weeks": 5, "1 month": 6, "2-3 months": 7, "6+ months": 9 };
+              update("consistencyHistory", map[vals[0]] || 5);
+            }}
           />
           {data.consistencyHistory >= 8 && (
             <div className="bg-gold-faded rounded-[14px] p-3 mt-3 flex items-start gap-2" data-testid="warning-consistency">
@@ -2161,37 +2234,466 @@ function Screen9({ data, update }: { data: OnboardingData; update: <K extends ke
   );
 }
 
-// ─── Screen 10: Milestones ───────────────────────────────────
-function Screen10({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
-  const showCalibrationWarning = data.selfDiscipline >= 8 && data.consistencyHistory < 5;
+// ─── Glide Path Generator ─────────────────────────────────────────
+function generateGlidePath(data: OnboardingData): MilestoneData[] {
+  const conditionNames = data.healthConditions.map(c => c.condition.toLowerCase());
+  const hasKneeOrBack = conditionNames.some(c =>
+    c.includes("knee") || c.includes("back") || c.includes("sciatica") || c.includes("spondylosis")
+  );
+  const hasHeart = conditionNames.some(c => c.includes("heart"));
+  const hasAsthma = conditionNames.some(c => c.includes("asthma"));
+  const lowConsistency = data.consistencyHistory <= 3;
+  const highConsistency = data.consistencyHistory >= 7;
+  const lowDiscipline = data.selfDiscipline <= 3;
 
-  const loadSuggestions = () => {
-    const suggested: MilestoneData[] = [];
-    for (const goal of data.goals) {
-      const s = MILESTONE_SUGGESTIONS[goal];
-      if (s) suggested.push({ ...s, steps: s.steps.map(st => ({ ...st })) });
+  // Safe cardio suggestion based on health conditions
+  const cardioSuggestion = hasKneeOrBack
+    ? "swimming or cycling"
+    : hasAsthma || hasHeart
+    ? "brisk walking"
+    : "brisk walking or light jogging";
+
+  const milestones: MilestoneData[] = [];
+
+  // ── Lose Weight ──────────────────────────────────────────────
+  if (data.goals.includes("Lose Weight")) {
+    const totalKg = Math.max(0, data.weightKg - data.targetWeightKg);
+    const timelineWeeks =
+      data.weightTimeline === "3 months" ? 12
+      : data.weightTimeline === "6 months" ? 24
+      : data.weightTimeline === "1 year" ? 52
+      : 12;
+    const safeRate = Math.min(totalKg / Math.max(timelineWeeks, 1), 1);
+    const firstPhaseKg = +(safeRate * 2).toFixed(1);
+    const targetDisplay = data.targetWeightKg > 0 ? `${data.targetWeightKg}kg` : "your target weight";
+    const weeksLabel = data.weightTimeline || "12 weeks";
+
+    let phases: { name: string; weeks: string; color: string }[];
+    let steps: { weekLabel: string; description: string; why: string }[];
+
+    if (timelineWeeks >= 12) {
+      phases = [
+        { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+        { name: "Building", weeks: "Week 3-6", color: "accent" },
+        { name: "Momentum", weeks: "Week 7-10", color: "violet" },
+        { name: "Sustain", weeks: `Week 11-${timelineWeeks}`, color: "primary" },
+      ];
+      if (lowConsistency || lowDiscipline) {
+        steps = [
+          {
+            weekLabel: "Week 1-2",
+            description: "Track everything you eat (no changes yet) and drink 2.5L water daily",
+            why: "Awareness before action -- tracking alone typically reduces intake by 10-15% without any restriction",
+          },
+          {
+            weekLabel: "Week 3-6",
+            description: `Replace one meal a day with a high-protein option, add ${cardioSuggestion} 3x/week for 20 min`,
+            why: "A single daily swap builds the habit loop without overwhelming you",
+          },
+          {
+            weekLabel: "Week 7-10",
+            description: `Reduce refined carbs by a third, increase ${cardioSuggestion} to 4x/week, add 2 strength sessions`,
+            why: "Combining cardio with strength training accelerates fat loss and preserves muscle",
+          },
+          {
+            weekLabel: `Week 11-${timelineWeeks}`,
+            description: "Maintain deficit, weigh in weekly, plan for social events and travel ahead of time",
+            why: "Most weight loss fails at plateau -- having a plan for life's interruptions is the difference",
+          },
+        ];
+      } else if (highConsistency) {
+        steps = [
+          {
+            weekLabel: "Week 1-2",
+            description: `Log all meals, set a daily calorie target, start ${cardioSuggestion} 4x/week`,
+            why: "Starting with structure leverages your existing discipline immediately",
+          },
+          {
+            weekLabel: "Week 3-6",
+            description: "Structured deficit (500 kcal/day below TDEE), 3x strength training + 3x cardio",
+            why: "A 500 kcal deficit produces roughly 0.5kg/week loss -- proven and sustainable",
+          },
+          {
+            weekLabel: "Week 7-10",
+            description: "Introduce progressive overload in strength sessions, track weekly body measurements",
+            why: "Measuring more than the scale shows true progress even on plateau weeks",
+          },
+          {
+            weekLabel: `Week 11-${timelineWeeks}`,
+            description: `Diet break week at maintenance, then final push to ${targetDisplay}`,
+            why: "A planned diet break resets leptin levels and prevents metabolic adaptation",
+          },
+        ];
+      } else {
+        steps = [
+          {
+            weekLabel: "Week 1-2",
+            description: "Track meals 5/7 days, cut sugary drinks, add a 20-min morning walk daily",
+            why: "Tracking and liquid calories are the two highest-impact low-effort changes",
+          },
+          {
+            weekLabel: "Week 3-6",
+            description: `Reduce portion size by 20%, eat protein-first at meals, ${cardioSuggestion} 3x/week`,
+            why: "Protein keeps you full longer, reducing total intake without counting every calorie",
+          },
+          {
+            weekLabel: "Week 7-10",
+            description: "Add 2x strength sessions per week, track weight every Wednesday morning",
+            why: "Consistent measurement day avoids misleading day-to-day fluctuations",
+          },
+          {
+            weekLabel: `Week 11-${timelineWeeks}`,
+            description: "Focus on maintenance patterns -- meal prep, social eating strategies, sleep 7+ hrs",
+            why: "Habits that survive weekends and social events are the ones that last",
+          },
+        ];
+      }
+    } else {
+      phases = [
+        { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+        { name: "Building", weeks: `Week 3-${timelineWeeks}`, color: "accent" },
+      ];
+      steps = [
+        {
+          weekLabel: "Week 1-2",
+          description: `Track all meals, swap sugary drinks for water, add 15-min ${cardioSuggestion} daily`,
+          why: "Quick wins in week 1-2 set the psychological tone for the rest of the journey",
+        },
+        {
+          weekLabel: `Week 3-${timelineWeeks}`,
+          description: `Maintain 400-500 kcal daily deficit, ${cardioSuggestion} 4x/week, strength 2x/week`,
+          why: `At this pace you can expect to lose ${firstPhaseKg}kg by your target date`,
+        },
+      ];
     }
-    if (suggested.length > 0) update("milestones", suggested);
-  };
 
-  const updateMilestone = (idx: number, field: keyof MilestoneData, value: any) => {
-    const updated = [...data.milestones];
-    updated[idx] = { ...updated[idx], [field]: value };
-    update("milestones", updated);
-  };
+    milestones.push({
+      title: totalKg > 0
+        ? `Lose ${totalKg.toFixed(1)}kg in ${weeksLabel}`
+        : "Healthy weight journey",
+      target: `Reach ${targetDisplay} by maintaining a progressive deficit`,
+      timeframe: data.weightTimeline || "3 months",
+      phases,
+      steps,
+    });
+  }
 
-  const updateStep = (mIdx: number, sIdx: number, desc: string) => {
+  // ── Build Strength ────────────────────────────────────────────
+  if (data.goals.includes("Build Strength")) {
+    const exerciseTypes = (data as any).exerciseTypes || data.activities || [];
+    const prefersGym = exerciseTypes.some((e: string) =>
+      e.toLowerCase().includes("gym") || e.toLowerCase().includes("weight")
+    );
+    const startSessions = lowConsistency ? "2" : "2";
+
+    milestones.push({
+      title: "Build a sustainable strength foundation",
+      target: `Complete ${highConsistency ? 36 : 24} training sessions over 12 weeks`,
+      timeframe: "3 months",
+      phases: [
+        { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+        { name: "Building", weeks: "Week 3-6", color: "accent" },
+        { name: "Momentum", weeks: "Week 7-10", color: "violet" },
+        { name: "Sustain", weeks: "Week 11-12", color: "primary" },
+      ],
+      steps: [
+        {
+          weekLabel: "Week 1-2",
+          description: `${startSessions}x/week full-body bodyweight: squats, push-ups, glute bridges, planks (20 min)`,
+          why: "Bodyweight mastery before adding load prevents injury and builds proprioception",
+        },
+        {
+          weekLabel: "Week 3-6",
+          description: `3x/week, add ${prefersGym ? "barbell/dumbbell compound lifts" : "resistance bands or weighted backpack"}, track reps and note progress`,
+          why: "Progressive overload -- consistently adding a little more -- is the single mechanism behind strength gains",
+        },
+        {
+          weekLabel: "Week 7-10",
+          description: hasKneeOrBack
+            ? "Upper-lower split: 2 upper days + 2 lower (seated/lying exercises), avoid spinal loading"
+            : "Push-pull-legs split 3x/week, increase weight by 2.5kg when you can complete all reps cleanly",
+          why: "Split routines allow muscles to recover fully while you train more frequently",
+        },
+        {
+          weekLabel: "Week 11-12",
+          description: "Deload week at 50% intensity, then test 1-rep max or max-rep benchmarks",
+          why: "Deload weeks prevent overtraining and let your nervous system consolidate strength gains",
+        },
+      ],
+    });
+  }
+
+  // ── Better Sleep ─────────────────────────────────────────────
+  if (data.goals.includes("Better Sleep")) {
+    milestones.push({
+      title: "Build a consistent sleep rhythm",
+      target: "Same sleep window within 30 min for 21 consecutive days",
+      timeframe: "6 weeks",
+      phases: [
+        { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+        { name: "Building", weeks: "Week 3-4", color: "accent" },
+        { name: "Momentum", weeks: "Week 5-6", color: "violet" },
+      ],
+      steps: [
+        {
+          weekLabel: "Week 1-2",
+          description: "Set one consistent wake time (same on weekends), no screens 30 min before bed",
+          why: "Circadian rhythm is anchored by wake time -- not sleep time. Fixing wake time first is faster",
+        },
+        {
+          weekLabel: "Week 3-4",
+          description: "Stop caffeine by 2pm, add a 10-min wind-down routine (dim lights, journaling or reading)",
+          why: "Caffeine has a 5-hour half-life -- afternoon coffee is still half-active at 10pm",
+        },
+        {
+          weekLabel: "Week 5-6",
+          description: "Cool bedroom to 18-20C if possible, try magnesium glycinate 400mg before bed",
+          why: "Core body temperature drop triggers melatonin release -- a cool room accelerates this",
+        },
+      ],
+    });
+  }
+
+  // ── Reduce Stress ────────────────────────────────────────────
+  if (data.goals.includes("Reduce Stress")) {
+    milestones.push({
+      title: "Build a daily stress-recovery practice",
+      target: "30 consecutive days with at least one stress practice completed",
+      timeframe: "1 month",
+      phases: [
+        { name: "Foundation", weeks: "Week 1", color: "primary" },
+        { name: "Building", weeks: "Week 2", color: "accent" },
+        { name: "Momentum", weeks: "Week 3-4", color: "violet" },
+      ],
+      steps: [
+        {
+          weekLabel: "Week 1",
+          description: "5 min box breathing daily: 4s inhale, 4s hold, 4s exhale, 4s hold -- repeat 5 rounds",
+          why: "Box breathing activates the vagus nerve and lowers cortisol within minutes of practice",
+        },
+        {
+          weekLabel: "Week 2",
+          description: "Add a 10-min evening wind-down: write 3 things that went well today before bed",
+          why: "Gratitude journaling reduces pre-sleep rumination -- one of the biggest sleep and stress disruptors",
+        },
+        {
+          weekLabel: "Week 3-4",
+          description: "15-min midday walk without headphones, plus breathing practice. Track stress level 1-10 daily",
+          why: "Tracking stress reveals patterns (time of day, triggers) so you can intervene before it peaks",
+        },
+      ],
+    });
+  }
+
+  // ── More Energy ──────────────────────────────────────────────
+  if (data.goals.includes("More Energy")) {
+    milestones.push({
+      title: "Achieve sustained energy above 6/10",
+      target: "Self-rated daily energy at 6+ for 14 consecutive days",
+      timeframe: "1 month",
+      phases: [
+        { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+        { name: "Building", weeks: "Week 3-4", color: "accent" },
+      ],
+      steps: [
+        {
+          weekLabel: "Week 1-2",
+          description: "Target 7.5 hrs sleep, drink 2.5L water daily, 15-min morning walk before screens",
+          why: "Even mild dehydration (1-2%) reduces cognitive performance and perceived energy by 20-30%",
+        },
+        {
+          weekLabel: "Week 3-4",
+          description: "Add protein to every meal (eggs, dal, paneer, chicken), cut refined carbs at lunch",
+          why: "Stable blood sugar is the most direct lever for sustained afternoon energy -- protein blunts the spike and crash",
+        },
+      ],
+    });
+  }
+
+  // ── Manage Pain ──────────────────────────────────────────────
+  if (data.goals.includes("Manage Pain")) {
+    const painAreas = data.painAreas || [];
+    const hasSpinalPain = painAreas.some((p: string) =>
+      p.toLowerCase().includes("back") || p.toLowerCase().includes("neck")
+    );
+    milestones.push({
+      title: "Reduce pain level by 2 points",
+      target: "Self-rated pain at 4 or below for 7 consecutive days",
+      timeframe: "1 month",
+      phases: [
+        { name: "Foundation", weeks: "Week 1-2", color: "primary" },
+        { name: "Building", weeks: "Week 3-4", color: "accent" },
+      ],
+      steps: [
+        {
+          weekLabel: "Week 1-2",
+          description: hasSpinalPain
+            ? "Cat-cow, child's pose, and knee-to-chest stretches for 10 min daily. Track pain score morning and evening"
+            : "10 min gentle stretching daily focused on your specific pain areas. Log triggers and patterns",
+          why: "Tracking pain triggers is consistently the fastest path to identifying what to avoid -- and what helps",
+        },
+        {
+          weekLabel: "Week 3-4",
+          description: "Add anti-inflammatory foods (turmeric milk, omega-3 rich fish or flaxseed, berries). Heat therapy 10 min before stretching",
+          why: "Heat before movement increases tissue flexibility; dietary anti-inflammatories reduce systemic pain over weeks",
+        },
+      ],
+    });
+  }
+
+  // ── Improve Blood Markers ────────────────────────────────────
+  if (data.goals.includes("Improve Blood Markers")) {
+    milestones.push({
+      title: "Establish blood marker baseline and 90-day targets",
+      target: "Complete blood panel reviewed with doctor, action plan in place",
+      timeframe: "2 weeks",
+      phases: [
+        { name: "Foundation", weeks: "Week 1", color: "primary" },
+        { name: "Building", weeks: "Week 2", color: "accent" },
+      ],
+      steps: [
+        {
+          weekLabel: "Week 1",
+          description: "Book and complete a comprehensive panel: HbA1c, fasting glucose, lipids, thyroid (TSH), Vitamin D, CBC",
+          why: "You cannot set a target without a baseline -- this is the non-negotiable first step",
+        },
+        {
+          weekLabel: "Week 2",
+          description: "Review results with your doctor. Write down your specific targets and retest date (90 days)",
+          why: "A concrete number (e.g. HbA1c from 7.2 to below 6.5) transforms an abstract goal into a trackable metric",
+        },
+      ],
+    });
+  }
+
+  // ── Fallback: generic for any unmapped goal ───────────────────
+  const mappedGoals = [
+    "Lose Weight", "Build Strength", "Better Sleep",
+    "Reduce Stress", "More Energy", "Manage Pain", "Improve Blood Markers",
+  ];
+  for (const goal of data.goals) {
+    if (!mappedGoals.includes(goal) && MILESTONE_SUGGESTIONS[goal]) {
+      const s = MILESTONE_SUGGESTIONS[goal];
+      milestones.push({ ...s, steps: s.steps.map(st => ({ ...st })) });
+    }
+  }
+
+  return milestones;
+}
+
+// ── Phase color helpers ──────────────────────────────────────
+const PHASE_STYLES: Record<string, {
+  bg: string; border: string; dot: string; label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = {
+  primary: { bg: "bg-primary/8",  border: "border-primary/20", dot: "bg-primary", label: "text-primary", icon: Leaf },
+  accent:  { bg: "bg-accent/8",   border: "border-accent/20",  dot: "bg-accent",  label: "text-accent",  icon: TrendingUp },
+  violet:  { bg: "bg-violet/8",   border: "border-violet/20",  dot: "bg-violet",  label: "text-violet",  icon: Flame },
+  gold:    { bg: "bg-gold-faded", border: "border-gold/20",    dot: "bg-gold",    label: "text-gold",    icon: Sparkles },
+};
+
+const GOAL_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  "Lose Weight":           Footprints,
+  "Build Strength":        Dumbbell,
+  "Better Sleep":          Moon,
+  "Reduce Stress":         Leaf,
+  "More Energy":           Flame,
+  "Manage Pain":           Heart,
+  "Improve Blood Markers": TrendingUp,
+};
+
+// ── Editable Step Card ────────────────────────────────────────
+function StepCard({
+  step, stepIdx, mIdx, phaseColor,
+  onEditDesc, onEditWhy,
+}: {
+  step: { weekLabel: string; description: string; why: string };
+  stepIdx: number;
+  mIdx: number;
+  phaseColor: string;
+  onEditDesc: (val: string) => void;
+  onEditWhy: (val: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const style = PHASE_STYLES[phaseColor] || PHASE_STYLES.primary;
+
+  return (
+    <div className="relative pl-6 pb-5 last:pb-0" data-testid={`milestone-${mIdx}-step-${stepIdx}`}>
+      {/* vertical connector line */}
+      <span className="absolute left-[9px] top-5 bottom-0 w-px bg-border last:hidden" aria-hidden />
+      {/* dot */}
+      <span className={`absolute left-0 top-1 w-[18px] h-[18px] rounded-full ${style.dot} flex items-center justify-center`}>
+        <Check className="w-2.5 h-2.5 text-white" />
+      </span>
+
+      <div className="mb-1 flex items-center gap-2">
+        <span className={`text-xs font-semibold ${style.label}`}>{step.weekLabel}</span>
+        <button
+          type="button"
+          onClick={() => setEditing(e => !e)}
+          className="ml-auto text-text-faint hover:text-primary transition-colors"
+          aria-label={editing ? "Save step" : "Edit step"}
+        >
+          {editing ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {editing ? (
+        <div className="space-y-2">
+          <textarea
+            value={step.description}
+            onChange={e => onEditDesc(e.target.value)}
+            rows={2}
+            className="vitallity-input resize-none text-sm w-full"
+            placeholder="What to do"
+            data-testid={`milestone-${mIdx}-step-${stepIdx}-desc`}
+          />
+          <textarea
+            value={step.why}
+            onChange={e => onEditWhy(e.target.value)}
+            rows={2}
+            className="vitallity-input resize-none text-xs w-full"
+            placeholder="Why this matters"
+            data-testid={`milestone-${mIdx}-step-${stepIdx}-why`}
+          />
+        </div>
+      ) : (
+        <div>
+          <p className="text-sm text-foreground leading-snug">{step.description}</p>
+          <p className="text-xs text-text-light mt-1 italic leading-relaxed">{step.why}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Screen 10: Smart Glide Path ────────────────────────────────
+function Screen10({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
+  // Auto-generate glide path on first load
+  useEffect(() => {
+    if (data.milestones.length === 0 && data.goals.length > 0) {
+      update("milestones", generateGlidePath(data));
+    }
+  }, []);
+
+  // Regenerate when goals change (e.g. user went back and changed goals)
+  const [prevGoals, setPrevGoals] = useState<string[]>(data.goals);
+  useEffect(() => {
+    if (JSON.stringify(prevGoals) !== JSON.stringify(data.goals)) {
+      setPrevGoals(data.goals);
+      update("milestones", generateGlidePath(data));
+    }
+  }, [data.goals]);
+
+  const updateStepField = (
+    mIdx: number,
+    sIdx: number,
+    field: "description" | "why",
+    val: string
+  ) => {
     const updated = [...data.milestones];
     const steps = [...updated[mIdx].steps];
-    steps[sIdx] = { ...steps[sIdx], description: desc };
-    updated[mIdx] = { ...updated[mIdx], steps };
-    update("milestones", updated);
-  };
-
-  const addWeek = (mIdx: number) => {
-    const updated = [...data.milestones];
-    const steps = [...updated[mIdx].steps];
-    steps.push({ weekNumber: steps.length + 1, description: "" });
+    steps[sIdx] = { ...steps[sIdx], [field]: val };
     updated[mIdx] = { ...updated[mIdx], steps };
     update("milestones", updated);
   };
@@ -2202,135 +2704,196 @@ function Screen10({ data, update }: { data: OnboardingData; update: <K extends k
 
   const addCustomMilestone = () => {
     update("milestones", [...data.milestones, {
-      title: "", target: "", timeframe: "1 month",
-      steps: [{ weekNumber: 1, description: "" }],
+      title: "Custom milestone",
+      target: "",
+      timeframe: "1 month",
+      phases: [{ name: "Foundation", weeks: "Week 1-2", color: "primary" }],
+      steps: [{ weekLabel: "Week 1-2", description: "", why: "" }],
     }]);
   };
 
+  const regenerate = () => {
+    update("milestones", generateGlidePath(data));
+  };
+
+  const showCalibrationWarning = data.selfDiscipline >= 8 && data.consistencyHistory < 5;
+
+  // End-goal summary line for weight loss
+  const endGoalLine = (() => {
+    if (data.goals.includes("Lose Weight") && data.targetWeightKg > 0) {
+      const month = data.weightTimeline === "3 months" ? 3
+        : data.weightTimeline === "6 months" ? 6
+        : data.weightTimeline === "1 year" ? 12 : 3;
+      const now = new Date();
+      now.setMonth(now.getMonth() + month);
+      const label = now.toLocaleString("en-IN", { month: "long", year: "numeric" });
+      return `Target: ${data.targetWeightKg}kg by ${label}`;
+    }
+    return null;
+  })();
+
   return (
     <div data-testid="screen-10">
-      <h2 className="font-display text-2xl font-bold mb-1">Milestone builder</h2>
-      <p className="text-text-light text-sm mb-6">Break your goals into trackable milestones</p>
-
-      <div className="bg-primary/10 rounded-[14px] p-5 mb-6 border border-primary/15" data-testid="milestone-context">
-        <p className="text-sm text-primary leading-relaxed">
-          Big goals are achieved through small, trackable milestones. We'll break your goals into milestones -- each with a measurable target, a timeframe, and weekly steps. As life happens, we'll adjust together.
-        </p>
-      </div>
+      <h2 className="font-display text-2xl font-bold mb-1">Your glide path</h2>
+      <p className="text-text-light text-sm mb-6">A step-by-step runway to your goals, built around your reality</p>
 
       {showCalibrationWarning && (
-        <div className="bg-gold-faded rounded-[14px] p-4 mb-6 flex items-start gap-2" data-testid="calibration-milestone-warning">
+        <div className="bg-gold-faded rounded-[14px] p-4 mb-5 flex items-start gap-2" data-testid="calibration-milestone-warning">
           <AlertTriangle className="w-4 h-4 text-gold shrink-0 mt-0.5" />
-          <span className="text-xs text-gold">Your confidence is great, but consistency data suggests starting with shorter milestones (1-2 weeks) to build momentum before longer commitments.</span>
+          <span className="text-xs text-gold">Your plans have tended to start strong but fade. We've built this path to start easy -- resist the urge to skip ahead.</span>
         </div>
       )}
 
-      {data.milestones.length === 0 && (
-        <button
-          type="button"
-          onClick={loadSuggestions}
-          className="w-full border-2 border-dashed border-primary/30 rounded-[14px] p-6 text-center hover:bg-primary/5 transition-colors mb-6"
-          data-testid="load-suggestions"
-        >
+      {data.milestones.length === 0 && data.goals.length === 0 && (
+        <div className="bg-primary/8 rounded-[14px] p-6 text-center border border-primary/15" data-testid="no-goals-prompt">
           <Target className="w-6 h-6 text-primary mx-auto mb-2" />
-          <span className="text-sm font-semibold text-primary">Load Suggested Milestones</span>
-          <p className="text-xs text-text-light mt-1">Based on your selected goals</p>
-        </button>
+          <p className="text-sm font-semibold text-primary">No goals selected yet</p>
+          <p className="text-xs text-text-light mt-1">Go back to Step 8 and select your goals to generate your glide path</p>
+        </div>
       )}
 
-      <div className="space-y-5">
-        {data.milestones.map((m, mIdx) => (
-          <div key={mIdx} className="vitallity-card relative" data-testid={`milestone-${mIdx}`}>
-            <button
-              type="button"
-              onClick={() => removeMilestone(mIdx)}
-              className="absolute top-4 right-4 text-text-light hover:text-rose transition-colors"
-              aria-label={`Remove milestone ${mIdx + 1}`}
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+      <div className="space-y-7">
+        {data.milestones.map((m, mIdx) => {
+          const GoalIcon = GOAL_ICONS[data.goals[mIdx]] || Target;
+          const phases = m.phases || [{ name: "Foundation", weeks: "All weeks", color: "primary" }];
 
-            <div className="space-y-4 pr-8">
-              <div>
-                <label className="vitallity-label">Title</label>
-                <input
-                  type="text"
-                  value={m.title}
-                  onChange={e => updateMilestone(mIdx, "title", e.target.value)}
-                  placeholder="Milestone title"
-                  className="vitallity-input"
-                  data-testid={`milestone-${mIdx}-title`}
-                />
-              </div>
+          // Group steps by matching phase.weeks label
+          const phaseSteps: { phase: typeof phases[0]; steps: typeof m.steps; startSIdx: number }[] = [];
+          let sIdx = 0;
+          for (const phase of phases) {
+            const matchingSteps = m.steps.filter(s => s.weekLabel === phase.weeks);
+            if (matchingSteps.length > 0) {
+              phaseSteps.push({ phase, steps: matchingSteps, startSIdx: sIdx });
+              sIdx += matchingSteps.length;
+            } else {
+              const fallbackSteps = m.steps.slice(sIdx, sIdx + 1);
+              if (fallbackSteps.length > 0) {
+                phaseSteps.push({ phase, steps: fallbackSteps, startSIdx: sIdx });
+                sIdx += fallbackSteps.length;
+              }
+            }
+          }
+          // Remaining steps not assigned to any phase
+          if (sIdx < m.steps.length) {
+            phaseSteps.push({
+              phase: { name: "Additional", weeks: "", color: "primary" },
+              steps: m.steps.slice(sIdx),
+              startSIdx: sIdx,
+            });
+          }
 
-              <div>
-                <label className="vitallity-label">Measurable Target</label>
-                <input
-                  type="text"
-                  value={m.target}
-                  onChange={e => updateMilestone(mIdx, "target", e.target.value)}
-                  placeholder="e.g. Lose 2.5kg, Walk 30min daily"
-                  className="vitallity-input"
-                  data-testid={`milestone-${mIdx}-target`}
-                />
-              </div>
-
-              <div>
-                <label className="vitallity-label">Timeframe</label>
-                <select
-                  value={m.timeframe}
-                  onChange={e => updateMilestone(mIdx, "timeframe", e.target.value)}
-                  className="vitallity-input"
-                  data-testid={`milestone-${mIdx}-timeframe`}
-                >
-                  <option value="1 week">1 week</option>
-                  <option value="2 weeks">2 weeks</option>
-                  <option value="1 month">1 month</option>
-                  <option value="2 months">2 months</option>
-                  <option value="3 months">3 months</option>
-                  <option value="6 months">6 months</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="vitallity-label">Weekly Steps</label>
-                <div className="space-y-2">
-                  {m.steps.map((s, sIdx) => (
-                    <div key={sIdx} className="flex items-center gap-2">
-                      <span className="text-xs text-text-light font-medium w-10 shrink-0">Wk {s.weekNumber}</span>
-                      <input
-                        type="text"
-                        value={s.description}
-                        onChange={e => updateStep(mIdx, sIdx, e.target.value)}
-                        placeholder="What to do this week"
-                        className="vitallity-input flex-1"
-                        data-testid={`milestone-${mIdx}-step-${sIdx}`}
-                      />
-                    </div>
-                  ))}
+          return (
+            <div key={mIdx} className="vitallity-card" data-testid={`milestone-${mIdx}`}>
+              {/* Milestone header */}
+              <div className="flex items-start justify-between gap-3 mb-5">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-[10px] bg-primary/10 flex items-center justify-center shrink-0">
+                    <GoalIcon className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground text-sm leading-snug">{m.title}</h3>
+                    <p className="text-xs text-text-light mt-0.5">{m.target}</p>
+                  </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => addWeek(mIdx)}
-                  className="text-xs text-primary font-semibold mt-2 flex items-center gap-1 hover:underline"
+                  onClick={() => removeMilestone(mIdx)}
+                  className="text-text-faint hover:text-rose transition-colors shrink-0 mt-0.5"
+                  aria-label={`Remove ${m.title}`}
                 >
-                  <Plus className="w-3 h-3" /> Add week
+                  <X className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Timeframe badge */}
+              <div className="flex items-center gap-1.5 mb-5">
+                <Clock className="w-3.5 h-3.5 text-text-light" />
+                <span className="text-xs text-text-light font-medium">{m.timeframe}</span>
+              </div>
+
+              {/* Phase cards with vertical timeline */}
+              <div className="space-y-4">
+                {phaseSteps.map(({ phase, steps: pSteps, startSIdx }, pIdx) => {
+                  const style = PHASE_STYLES[phase.color] || PHASE_STYLES.primary;
+                  const PhaseIcon = style.icon;
+                  return (
+                    <div
+                      key={pIdx}
+                      className={`rounded-[12px] border ${style.bg} ${style.border} p-4`}
+                      data-testid={`milestone-${mIdx}-phase-${pIdx}`}
+                    >
+                      {/* Phase header */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`w-6 h-6 rounded-full ${style.dot} flex items-center justify-center shrink-0`}>
+                          <PhaseIcon className="w-3 h-3 text-white" />
+                        </span>
+                        <span className={`text-xs font-bold uppercase tracking-wide ${style.label}`}>
+                          Phase {pIdx + 1}: {phase.name}
+                        </span>
+                        {phase.weeks && (
+                          <span className="text-xs text-text-faint ml-auto">{phase.weeks}</span>
+                        )}
+                      </div>
+
+                      {/* Steps within phase */}
+                      <div className="mt-2">
+                        {pSteps.map((step, relIdx) => {
+                          const absoluteSIdx = startSIdx + relIdx;
+                          return (
+                            <StepCard
+                              key={absoluteSIdx}
+                              step={step}
+                              stepIdx={absoluteSIdx}
+                              mIdx={mIdx}
+                              phaseColor={phase.color}
+                              onEditDesc={val => updateStepField(mIdx, absoluteSIdx, "description", val)}
+                              onEditWhy={val => updateStepField(mIdx, absoluteSIdx, "why", val)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <button
-        type="button"
-        onClick={addCustomMilestone}
-        className="w-full border-2 border-dashed border-border rounded-[14px] p-5 text-center hover:bg-card transition-colors mt-5"
-        data-testid="add-custom-milestone"
-      >
-        <Plus className="w-5 h-5 text-text-light mx-auto mb-1" />
-        <span className="text-sm text-text-light">Add Custom Milestone</span>
-      </button>
+      {/* End goal summary */}
+      {endGoalLine && (
+        <div className="mt-6 flex items-center justify-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 border border-primary/20">
+            <Target className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs font-semibold text-primary">{endGoalLine}</span>
+          </div>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="mt-6 flex gap-3">
+        <button
+          type="button"
+          onClick={regenerate}
+          className="flex-1 border border-border rounded-[12px] p-3 flex items-center justify-center gap-2 text-sm text-text-mid hover:bg-card transition-colors"
+          data-testid="regenerate-glide-path"
+        >
+          <Sparkles className="w-4 h-4 text-primary" />
+          Regenerate
+        </button>
+        <button
+          type="button"
+          onClick={addCustomMilestone}
+          className="flex-1 border border-dashed border-primary/30 rounded-[12px] p-3 flex items-center justify-center gap-2 text-sm text-primary hover:bg-primary/5 transition-colors"
+          data-testid="add-custom-milestone"
+        >
+          <Plus className="w-4 h-4" />
+          Add milestone
+        </button>
+      </div>
     </div>
   );
 }
