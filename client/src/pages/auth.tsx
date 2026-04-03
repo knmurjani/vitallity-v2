@@ -197,7 +197,7 @@ export default function AuthPage() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden" data-testid="auth-page">
       {/* Full-bleed hero background */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 bg-[#2a1f14]">
         <img
           src={heroAuth}
           alt=""
