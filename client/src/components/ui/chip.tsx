@@ -18,7 +18,7 @@ export function Chip({ label, description, selected, onToggle, disabled, testId 
       onClick={onToggle}
       className={`
         inline-flex items-center gap-2 rounded-[100px] border-[1.5px] px-4 py-2.5
-        text-sm font-medium transition-all cursor-pointer select-none
+        text-sm font-medium transition-all cursor-pointer select-none active:scale-[0.97]
         ${selected
           ? "border-primary bg-primary/8 text-primary"
           : "border-border bg-card text-text-mid hover:border-primary/40"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth, useAuthFetch } from "@/hooks/use-auth";
 import { ChipGroup, Chip } from "@/components/ui/chip";
 import { RangeSlider } from "@/components/ui/range-slider";
@@ -9,6 +9,8 @@ import {
   Trash2, Watch, Activity,
   Clock, TrendingUp, Flame, Footprints, Moon, Dumbbell, Leaf,
   ChevronDown, ChevronUp, Pencil,
+  Brain, Eye, Shield, Zap, BarChart2, RefreshCw, ChevronRight,
+  User, ListChecks,
 } from "lucide-react";
 
 // ─── Why We Ask Tooltip ────────────────────────────────────
@@ -43,7 +45,7 @@ const PHASES = [
   { label: "Body & Movement", steps: [3, 4] },
   { label: "Food & Lifestyle", steps: [5, 6] },
   { label: "What Worked", steps: [7] },
-  { label: "Goals & Plan", steps: [8, 9, 10, 11] },
+  { label: "Goals & Plan", steps: [8, 9, 10, 11, 12] },
 ];
 
 function getPhaseForStep(step: number) {
@@ -351,6 +353,16 @@ interface HealthConditionEntry {
   notes: string;
 }
 
+interface HealthSummaryData {
+  profileSnapshot: string;
+  observations: string[];
+  healthConsiderations: string[];
+  strengths: string[];
+  focusAreas: string[];
+  recommendedApproach: string;
+  clarifyingQuestions: string[];
+}
+
 interface MilestoneData {
   title: string;
   target: string;
@@ -457,8 +469,9 @@ const defaultData: OnboardingData = {
 const ENCOURAGING_SUBTITLES: Record<number, string> = {
   2: "Almost done with the health basics -- you're doing great",
   4: "Halfway there! Your exercise profile helps us plan smarter",
-  7: "You're in the home stretch -- just goals and milestones left",
-  11: "You did it! Your personalized journey starts now",
+  7: "Nearly there -- your AI health summary is next",
+  8: "We're analyzing everything you've shared",
+  12: "You did it! Your personalized journey starts now",
 };
 
 export default function Onboarding() {
@@ -470,6 +483,7 @@ export default function Onboarding() {
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [phaseCelebration, setPhaseCelebration] = useState<string | null>(null);
   const [prevPhase, setPrevPhase] = useState<number>(0);
+  const [healthSummary, setHealthSummary] = useState<HealthSummaryData | null>(null);
 
   // Load existing progress
   useEffect(() => {
@@ -477,7 +491,7 @@ export default function Onboarding() {
     authFetch("GET", "/api/onboarding/progress")
       .then(res => res.json())
       .then(progress => {
-        if (progress.step) setStep(Math.min(progress.step, 11));
+        if (progress.step) setStep(Math.min(progress.step, 12));
         const d = progress.data;
         if (d?.profile) {
           const p = d.profile;
@@ -637,6 +651,10 @@ export default function Onboarding() {
           body = { pastAttemptsWorked: data.pastAttemptsWorked };
           break;
         case 8:
+          // AI Health Summary screen - no save needed, just advance
+          body = null;
+          break;
+        case 9:
           body = {
             goals: data.goals.map(g => ({ goalType: g })),
             customGoal: data.customGoal,
@@ -644,16 +662,16 @@ export default function Onboarding() {
             weightTimeline: data.goals.includes("Lose Weight") ? data.weightTimeline : null,
           };
           break;
-        case 9:
+        case 10:
           body = {
             nutritionKnowledge: data.nutritionKnowledge, exerciseKnowledge: data.exerciseKnowledge,
             selfDiscipline: data.selfDiscipline, consistencyHistory: data.consistencyHistory, whyNow: data.whyNow,
           };
           break;
-        case 10:
+        case 11:
           body = { milestones: data.milestones };
           break;
-        case 11: {
+        case 12: {
           const completeRes = await authFetch("POST", "/api/onboarding/complete");
           const completeData = await completeRes.json();
           if (completeData.newBadges?.length > 0) {
@@ -667,9 +685,11 @@ export default function Onboarding() {
         }
       }
 
-      await authFetch("POST", `/api/onboarding/step/${step}`, body);
+      if (body !== null) {
+        await authFetch("POST", `/api/onboarding/step/${step}`, body);
+      }
 
-      if (step < 11) {
+      if (step < 12) {
         const nextStep = step + 1;
         const currentPhaseIdx = getPhaseForStep(step);
         const nextPhaseIdx = getPhaseForStep(nextStep);
@@ -690,7 +710,7 @@ export default function Onboarding() {
     switch (step) {
       case 1:
         return data.name.trim() && data.age && parseInt(data.age) >= 13 && data.gender;
-      case 8:
+      case 9:
         if (bmi >= 35 && !data.bmiUnderstand) return false;
         return data.goals.length > 0;
       default:
@@ -710,18 +730,20 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[560px] mx-auto px-5 py-6 pb-32">
+      {/* Subtle gradient header accent */}
+      <div className="fixed top-0 left-0 right-0 h-32 pointer-events-none z-0" style={{ background: "linear-gradient(to bottom, rgba(26,58,42,0.05) 0%, transparent 100%)" }} />
+      <div className="max-w-[560px] mx-auto px-5 py-6 pb-32 relative z-10">
         {/* Phase indicator */}
-        <div className="flex gap-2 mb-3" data-testid="phase-indicator">
+        <div className="flex gap-1.5 mb-3" data-testid="phase-indicator">
           {PHASES.map((phase, i) => (
             <div key={phase.label} className="flex-1">
               <div
-                className={`h-1.5 rounded-full transition-colors ${
-                  i <= currentPhase ? "bg-primary" : "bg-border"
+                className={`h-[3px] rounded-full transition-all duration-500 ${
+                  i < currentPhase ? "bg-primary" : i === currentPhase ? "bg-primary" : "bg-border"
                 }`}
               />
-              <span className={`text-[10px] uppercase tracking-wider mt-1 block ${
-                i === currentPhase ? "text-primary font-semibold" : "text-text-light"
+              <span className={`text-[9px] uppercase tracking-[0.7px] mt-1 block truncate ${
+                i === currentPhase ? "text-primary font-semibold" : "text-text-faint"
               }`}>
                 {phase.label}
               </span>
@@ -730,16 +752,16 @@ export default function Onboarding() {
         </div>
 
         {/* Step progress */}
-        <div className="h-[3px] bg-border rounded-full mb-2" data-testid="step-progress">
+        <div className="h-[2px] bg-border rounded-full mb-2" data-testid="step-progress">
           <div
-            className="h-full bg-primary rounded-full transition-all duration-300"
-            style={{ width: `${(step / 11) * 100}%` }}
+            className="h-full bg-primary rounded-full transition-all duration-500"
+            style={{ width: `${(step / 12) * 100}%` }}
           />
         </div>
 
         {/* Step counter with time estimate */}
-        <p className="text-xs text-muted-foreground mb-1" data-testid="step-counter">
-          Step {step} of 11 {step < 11 ? `-- about ${Math.max(1, Math.ceil((11 - step) * 0.75))} min left` : "-- almost done!"}
+        <p className="text-[11px] text-muted-foreground mb-1" data-testid="step-counter">
+          Step {step} of 12 {step < 12 ? `· about ${Math.max(1, Math.ceil((12 - step) * 0.75))} min left` : "· almost done!"}
         </p>
 
         {/* Encouraging subtitle */}
@@ -773,10 +795,11 @@ export default function Onboarding() {
         {step === 5 && <Screen5 data={data} update={update} />}
         {step === 6 && <Screen6 data={data} update={update} />}
         {step === 7 && <Screen7 data={data} update={update} />}
-        {step === 8 && <Screen8 data={data} update={update} bmi={bmi} />}
-        {step === 9 && <Screen9 data={data} update={update} />}
+        {step === 8 && <Screen8AISummary data={data} healthSummary={healthSummary} setHealthSummary={setHealthSummary} authFetch={authFetch} />}
+        {step === 9 && <Screen9Goals data={data} update={update} bmi={bmi} healthSummary={healthSummary} />}
         {step === 10 && <Screen10 data={data} update={update} />}
-        {step === 11 && <Screen11 data={data} bmi={bmi} bmiCategory={bmiCategory} />}
+        {step === 11 && <Screen11Milestones data={data} update={update} />}
+        {step === 12 && <Screen12Review data={data} bmi={bmi} bmiCategory={bmiCategory} />}
       </div>
 
       {/* Bottom bar */}
@@ -802,10 +825,15 @@ export default function Onboarding() {
           >
             {saving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
-            ) : step === 11 ? (
+            ) : step === 12 ? (
               <>
                 Begin My Journey
                 <Sparkles className="w-4 h-4" />
+              </>
+            ) : step === 8 ? (
+              <>
+                Continue to Goals
+                <ArrowRight className="w-4 h-4" />
               </>
             ) : (
               <>
@@ -862,7 +890,7 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
   };
 
   return (
-    <div data-testid="screen-1">
+    <div data-testid="screen-1" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Let's get to know you</h2>
       <p className="text-text-light text-sm mb-8">Basic information to personalize your journey</p>
 
@@ -1095,7 +1123,7 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
   };
 
   return (
-    <div data-testid="screen-2">
+    <div data-testid="screen-2" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">
         Health history
         <WhyWeAsk text="Your health conditions help us avoid harmful exercise recommendations and tailor nutrition advice to your specific needs." />
@@ -1322,7 +1350,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
   const selectedAreas = data.painAreas.filter(p => p !== "None");
 
   return (
-    <div data-testid="screen-3">
+    <div data-testid="screen-3" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">
         Pain areas
         <WhyWeAsk text="Knowing your pain points helps us recommend safe exercises and suggest stretches or therapies specific to your problem areas." />
@@ -1517,7 +1545,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
 // ─── Screen 4: Exercise & Activity (MERGED) ──────────────────
 function Screen4({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
   return (
-    <div data-testid="screen-4">
+    <div data-testid="screen-4" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">
         Exercise & activity
         <WhyWeAsk text="Your exercise background helps us set realistic starting points and suggest activities you're likely to enjoy and stick with." />
@@ -1596,7 +1624,7 @@ function Screen5({ data, update }: { data: OnboardingData; update: <K extends ke
   };
 
   return (
-    <div data-testid="screen-5">
+    <div data-testid="screen-5" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">
         Diet & eating
         <WhyWeAsk text="Understanding your dietary preferences and patterns lets us suggest realistic, culturally appropriate meal plans instead of generic advice." />
@@ -1761,7 +1789,7 @@ function Screen6({ data, update }: { data: OnboardingData; update: <K extends ke
   };
 
   return (
-    <div data-testid="screen-6">
+    <div data-testid="screen-6" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Sleep, stress & constraints</h2>
       <p className="text-text-light text-sm mb-8">Factors that shape your capacity for change</p>
 
@@ -1843,7 +1871,7 @@ function Screen6({ data, update }: { data: OnboardingData; update: <K extends ke
 // ─── Screen 7: What Worked / What Didn't ─────────────────────
 function Screen7({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
   return (
-    <div data-testid="screen-7">
+    <div data-testid="screen-7" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">What worked vs. what didn't</h2>
       <p className="text-text-light text-sm mb-8">Now that we know your history, reflect on past attempts</p>
 
@@ -1864,11 +1892,234 @@ function Screen7({ data, update }: { data: OnboardingData; update: <K extends ke
   );
 }
 
-// ─── Screen 8: Goals ─────────────────────────────────────────
-function Screen8({ data, update, bmi }: {
+
+// ─── Screen 8: AI Health Summary (NEW) ─────────────────────────────────────
+function Screen8AISummary({
+  data, healthSummary, setHealthSummary, authFetch,
+}: {
+  data: OnboardingData;
+  healthSummary: HealthSummaryData | null;
+  setHealthSummary: (s: HealthSummaryData) => void;
+  authFetch: (method: string, path: string, body?: any) => Promise<Response>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [clarifyAnswers, setClarifyAnswers] = useState<string[]>([]);
+  const hasFetched = useRef(false);
+
+  const fetchSummary = async (extra?: string[]) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        profile: { name: data.name, age: data.age, gender: data.gender, heightCm: data.heightCm, weightKg: data.weightKg },
+        conditions: data.healthConditions,
+        acuteConditions: data.acuteConditions,
+        medications: data.medications,
+        painAreas: data.painAreas,
+        exercise: { occupationActivity: data.occupationActivity, exerciseComfort: data.exerciseComfort, exerciseHistory: data.exerciseHistoryOption, activities: data.activities },
+        eating: { mealsPerDay: data.mealsPerDay, snackingHabit: data.snackingHabit, cookingStyle: data.cookingStyle, dietaryPrefs: data.dietaryPrefs, eatingChallenges: data.eatingChallenges, dietHistory: data.dietHistory },
+        sleep: { sleepHours: data.sleepHours, sleepQuality: data.sleepQuality, sleepIssues: data.sleepIssues },
+        stress: { stressLevel: data.stressLevel, stressSources: data.stressSources },
+        constraints: data.constraintChoices,
+        pastAttemptsWorked: data.pastAttemptsWorked,
+        ...(extra && extra.length > 0 ? { clarifyingAnswers: extra } : {}),
+      };
+      const res = await authFetch("POST", "/api/ai/health-summary", payload);
+      const json = await res.json();
+      setHealthSummary(json);
+      setOpenSections({ observations: true });
+    } catch (e: any) {
+      setError("We couldn't generate your summary. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hasFetched.current && !healthSummary) {
+      hasFetched.current = true;
+      fetchSummary();
+    }
+  }, []);
+
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const sections: { key: keyof HealthSummaryData; label: string; icon: React.ReactNode; isList: boolean }[] = [
+    { key: "observations", label: "Key Observations", icon: <Eye className="w-4 h-4" />, isList: true },
+    { key: "healthConsiderations", label: "Health Considerations", icon: <Shield className="w-4 h-4" />, isList: true },
+    { key: "strengths", label: "Your Strengths", icon: <Zap className="w-4 h-4" />, isList: true },
+    { key: "focusAreas", label: "Areas for Focus", icon: <Target className="w-4 h-4" />, isList: true },
+    { key: "recommendedApproach", label: "Recommended Approach", icon: <BarChart2 className="w-4 h-4" />, isList: false },
+  ];
+
+  if (loading) {
+    return (
+      <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
+        <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
+        <p className="text-text-light text-sm mb-8">Analyzing everything you\'ve shared with us...</p>
+        <div className="space-y-4">
+          <div className="vitallity-card flex items-center gap-4 p-6">
+            <div className="w-10 h-10 rounded-full animate-shimmer shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 rounded-full animate-shimmer w-3/4" />
+              <div className="h-3 rounded-full animate-shimmer w-1/2" />
+            </div>
+          </div>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="vitallity-card p-5 space-y-3">
+              <div className="h-3 rounded-full animate-shimmer w-2/5" />
+              <div className="h-3 rounded-full animate-shimmer w-full" />
+              <div className="h-3 rounded-full animate-shimmer w-4/5" />
+            </div>
+          ))}
+          <div className="text-center mt-6">
+            <div className="inline-flex items-center gap-2 text-sm text-text-light">
+              <Brain className="w-4 h-4 text-primary animate-pulse" />
+              Analyzing your health profile...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
+        <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
+        <div className="vitallity-card p-6 mt-8 text-center">
+          <AlertTriangle className="w-8 h-8 text-gold mx-auto mb-3" />
+          <p className="text-sm text-text-mid mb-4">{error}</p>
+          <button
+            type="button"
+            onClick={() => fetchSummary()}
+            className="vitallity-btn-primary"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!healthSummary) return null;
+
+  const hasClarifyingQuestions = healthSummary.clarifyingQuestions && healthSummary.clarifyingQuestions.length > 0;
+
+  return (
+    <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
+      <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
+      <p className="text-text-light text-sm mb-6">A snapshot based on everything you\'ve shared</p>
+
+      {/* Profile Snapshot - gradient card */}
+      <div
+        className="rounded-[20px] p-5 mb-5 border border-primary/20"
+        style={{ background: "linear-gradient(135deg, rgba(26,58,42,0.08) 0%, rgba(26,58,42,0.02) 100%)" }}
+        data-testid="profile-snapshot-card"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <User className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.8px] text-primary font-semibold mb-1.5">Profile Snapshot</p>
+            <p className="text-sm text-foreground leading-relaxed">{healthSummary.profileSnapshot}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Collapsible sections */}
+      <div className="space-y-2.5">
+        {sections.map(({ key, label, icon, isList }) => {
+          const value = healthSummary[key];
+          const items = isList ? (value as string[]) : [];
+          const text = !isList ? (value as string) : "";
+          if ((isList && items.length === 0) || (!isList && !text)) return null;
+          const isOpen = openSections[key] ?? false;
+
+          return (
+            <div key={key} className="vitallity-card p-0 overflow-hidden" data-testid={`section-${key}`}>
+              <button
+                type="button"
+                onClick={() => toggleSection(key)}
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/30 transition-colors"
+              >
+                <span className="text-primary">{icon}</span>
+                <span className="flex-1 text-sm font-semibold text-foreground">{label}</span>
+                {isOpen ? <ChevronDown className="w-4 h-4 text-text-light" /> : <ChevronRight className="w-4 h-4 text-text-light" />}
+              </button>
+              {isOpen && (
+                <div className="px-4 pb-4 pt-0 border-t border-border/50">
+                  {isList ? (
+                    <ul className="space-y-2 mt-3">
+                      {items.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-text-mid">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-text-mid leading-relaxed mt-3">{text}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Clarifying Questions */}
+      {hasClarifyingQuestions && (
+        <div className="mt-5 vitallity-card" data-testid="clarifying-questions">
+          <div className="flex items-center gap-2 mb-4">
+            <Info className="w-4 h-4 text-primary" />
+            <p className="text-sm font-semibold text-foreground">A couple of clarifying questions</p>
+          </div>
+          <div className="space-y-4">
+            {healthSummary.clarifyingQuestions.map((q, i) => (
+              <div key={i}>
+                <label className="vitallity-label">{q}</label>
+                <input
+                  type="text"
+                  value={clarifyAnswers[i] || ""}
+                  onChange={e => {
+                    const next = [...clarifyAnswers];
+                    next[i] = e.target.value;
+                    setClarifyAnswers(next);
+                  }}
+                  placeholder="Your answer..."
+                  className="vitallity-input"
+                  data-testid={`clarify-answer-${i}`}
+                />
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => fetchSummary(clarifyAnswers)}
+            className="mt-4 flex items-center gap-2 text-sm text-primary font-semibold hover:opacity-80 transition-opacity"
+            data-testid="update-summary-btn"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Update Summary
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Screen 9: Goals (redesigned with AI suggestions) ──────────────────────
+function Screen9Goals({ data, update, bmi, healthSummary }: {
   data: OnboardingData;
   update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void;
   bmi: number;
+  healthSummary: HealthSummaryData | null;
 }) {
   const goalOptions = [
     { label: "Lose Weight", description: "Reduce body fat sustainably" },
@@ -1944,10 +2195,17 @@ function Screen8({ data, update, bmi }: {
   const conditionNames = data.healthConditions.map(c => c.condition);
   const hasCondition = (name: string) => conditionNames.includes(name);
 
+  // Derive AI-suggested goals from focusAreas
+  const aiSuggestedGoals = healthSummary?.focusAreas?.slice(0, 3) || [];
+
   return (
-    <div data-testid="screen-8">
-      <h2 className="font-display text-2xl font-bold mb-1">Your health goals</h2>
-      <p className="text-text-light text-sm mb-8">What matters most to you right now?</p>
+    <div data-testid="screen-9-goals" className="animate-fade-in-up">
+      <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your health goals</h2>
+      {healthSummary ? (
+        <p className="text-text-light text-sm mb-6">Based on your profile, here's what we'd recommend focusing on</p>
+      ) : (
+        <p className="text-text-light text-sm mb-6">What matters most to you right now?</p>
+      )}
 
       <div className="space-y-6">
         {/* BMI cards */}
@@ -2023,9 +2281,56 @@ function Screen8({ data, update, bmi }: {
           </div>
         )}
 
+        {/* AI-suggested goals */}
+        {aiSuggestedGoals.length > 0 && (
+          <div className="space-y-2.5" data-testid="ai-suggested-goals">
+            <p className="text-[11px] uppercase tracking-[0.8px] text-primary font-semibold">AI Recommendations</p>
+            {aiSuggestedGoals.map((suggestion, i) => {
+              // Map focus area text to a known goal
+              const matchedGoal = filteredGoals.find(g =>
+                suggestion.toLowerCase().includes(g.label.toLowerCase().split(' ')[0])
+              )?.label || null;
+              const isSelected = matchedGoal ? data.goals.includes(matchedGoal) : false;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    if (matchedGoal) {
+                      handleGoalChange(
+                        isSelected
+                          ? data.goals.filter(g => g !== matchedGoal)
+                          : [...data.goals, matchedGoal]
+                      );
+                    }
+                  }}
+                  className={`w-full text-left rounded-[16px] p-4 border transition-all active:scale-[0.97] ${
+                    isSelected
+                      ? 'bg-primary/8 border-primary/30'
+                      : 'bg-card border-border hover:border-primary/30'
+                  }`}
+                  data-testid={`ai-goal-${i}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                      isSelected ? 'border-primary bg-primary' : 'border-border'
+                    }`}>
+                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <div>
+                      {matchedGoal && <p className="text-sm font-semibold text-foreground mb-0.5">{matchedGoal}</p>}
+                      <p className="text-xs text-text-light leading-relaxed">{suggestion}</p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Goal selection */}
         <div>
-          <label className="vitallity-label">Select Your Goals</label>
+          <label className="vitallity-label">{aiSuggestedGoals.length > 0 ? 'All Goals' : 'Select Your Goals'}</label>
           <ChipGroup
             options={filteredGoals}
             selected={data.goals}
@@ -2033,6 +2338,18 @@ function Screen8({ data, update, bmi }: {
             multiple
           />
         </div>
+
+        {/* Reality check based on consistency history */}
+        {data.consistencyHistory > 0 && data.consistencyHistory <= 4 && (
+          <div className="bg-accent-faded rounded-[16px] p-4 border border-accent/20" data-testid="reality-check">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+              <p className="text-xs text-accent leading-relaxed">
+                Based on your consistency history, we'd suggest starting with a 1-month milestone rather than jumping to 6 months. Small wins compound.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Custom goal */}
         <div>
@@ -2099,14 +2416,14 @@ function Screen8({ data, update, bmi }: {
   );
 }
 
-// ─── Screen 9: Calibration / Self-Assessment ─────────────────
-function Screen9({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
+// ─── Screen 10: Self-Assessment ─────────────────────────────────
+function Screen10({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
   const pastText = (data.pastAttemptsWorked || "").toLowerCase();
   const showCrossValidation = data.selfDiscipline >= 8 &&
     (pastText.includes("fall off") || pastText.includes("couldn't maintain") || pastText.includes("stopped after") || pastText.includes("inconsist"));
 
   return (
-    <div data-testid="screen-9">
+    <div data-testid="screen-10" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Self-assessment</h2>
       <p className="text-text-light text-sm mb-6">Honest answers lead to realistic, lasting plans</p>
 
@@ -2667,8 +2984,8 @@ function StepCard({
   );
 }
 
-// ─── Screen 10: Smart Glide Path ────────────────────────────────
-function Screen10({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
+// ─── Screen 11: Smart Glide Path (Milestones) ─────────────────────
+function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
   // Auto-generate glide path on first load
   useEffect(() => {
     if (data.milestones.length === 0 && data.goals.length > 0) {
@@ -2733,7 +3050,7 @@ function Screen10({ data, update }: { data: OnboardingData; update: <K extends k
   })();
 
   return (
-    <div data-testid="screen-10">
+    <div data-testid="screen-11-milestones" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Your glide path</h2>
       <p className="text-text-light text-sm mb-6">A step-by-step runway to your goals, built around your reality</p>
 
@@ -2898,8 +3215,8 @@ function Screen10({ data, update }: { data: OnboardingData; update: <K extends k
   );
 }
 
-// ─── Screen 11: Journey Review ───────────────────────────────
-function Screen11({ data, bmi, bmiCategory }: { data: OnboardingData; bmi: number; bmiCategory: string }) {
+// ─── Screen 12: Journey Review ───────────────────────────────
+function Screen12Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi: number; bmiCategory: string }) {
   const scoreColor = (val: number) => {
     if (val <= 4) return "text-rose";
     if (val <= 7) return "text-gold";
@@ -2916,7 +3233,7 @@ function Screen11({ data, bmi, bmiCategory }: { data: OnboardingData; bmi: numbe
   const conditionNames = data.healthConditions.filter(c => c.condition !== "None currently").map(c => c.condition);
 
   return (
-    <div data-testid="screen-11">
+    <div data-testid="screen-12-review" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Your journey map</h2>
       <p className="text-text-light text-sm mb-8">Review your information before we begin</p>
 

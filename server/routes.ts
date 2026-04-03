@@ -8,7 +8,7 @@ import { searchFoods } from "@shared/foods";
 import { callHaiku } from "./ai/haiku";
 import { callSonnet } from "./ai/sonnet";
 import { callOpus } from "./ai/opus";
-import { getUserContext, buildInsightSystemPrompt, buildChatSystemPrompt, buildMotivationPrompt, buildWeeklyReviewPrompt } from "./ai/prompts";
+import { getUserContext, buildInsightSystemPrompt, buildChatSystemPrompt, buildMotivationPrompt, buildWeeklyReviewPrompt, buildHealthSummarySystemPrompt } from "./ai/prompts";
 import { checkAndAwardBadges } from "./badges";
 import { handleTelegramWebhook, isTelegramConfigured, sendReminders } from "./telegram";
 import { isGoogleSheetsConfigured, getAuthUrl, handleOAuthCallback, syncDailyLog, fullSync } from "./google-sheets";
@@ -889,6 +889,49 @@ export async function registerRoutes(
       }
 
       res.json({ insights, motivation, source });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
+  // POST /api/ai/health-summary
+  app.post("/api/ai/health-summary", extractUser, async (req: Request, res: Response) => {
+    try {
+      const onboardingData = req.body;
+      const systemPrompt = buildHealthSummarySystemPrompt();
+      const userMessage = `Please analyze this health intake data and provide a structured health summary:\n${JSON.stringify(onboardingData, null, 2)}`;
+
+      const aiResponse = await callSonnet(systemPrompt, [{ role: "user", content: userMessage }]);
+
+      let summary: {
+        profileSnapshot: string;
+        observations: string[];
+        healthConsiderations: string[];
+        strengths: string[];
+        focusAreas: string[];
+        recommendedApproach: string;
+        clarifyingQuestions: string[];
+      };
+
+      try {
+        let cleaned = aiResponse.trim();
+        if (cleaned.startsWith("```")) {
+          cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+        }
+        summary = JSON.parse(cleaned);
+      } catch {
+        summary = {
+          profileSnapshot: aiResponse,
+          observations: [],
+          healthConsiderations: [],
+          strengths: [],
+          focusAreas: [],
+          recommendedApproach: "",
+          clarifyingQuestions: [],
+        };
+      }
+
+      res.json(summary);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Server error" });
     }

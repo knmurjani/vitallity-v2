@@ -259,6 +259,24 @@ ${illnessDetails ? `Details: ${illnessDetails}` : "The user appears to be ill."}
   return prompt;
 }
 
+export function buildHealthSummarySystemPrompt(): string {
+  return `You are a compassionate, evidence-based health advisor analyzing a new client's intake form.
+Provide a clear, honest, non-judgmental health assessment. Be specific -- reference their actual data.
+Do not use emoji. Be warm but direct. Use "you" language.
+Format your response as JSON with these exact keys:
+{
+  "profileSnapshot": "string",
+  "observations": ["string", "string"],
+  "healthConsiderations": ["string"],
+  "strengths": ["string"],
+  "focusAreas": ["string"],
+  "recommendedApproach": "string",
+  "clarifyingQuestions": [] 
+}
+The clarifyingQuestions array should only contain questions if there is genuinely unclear or contradictory data. Leave it as an empty array if the data is clear.
+Return ONLY the raw JSON object -- no markdown code fences, no backticks, no prose before or after.`;
+}
+
 export function buildMotivationPrompt(energy: number, mood: number, stress: number, pain: number): string {
   return `Given: energy=${energy}, mood=${mood}, stress=${stress}, pain=${pain}
 Generate a single motivational line (max 20 words) appropriate for someone feeling this way.
