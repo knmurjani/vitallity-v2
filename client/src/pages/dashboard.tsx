@@ -762,6 +762,140 @@ export default function Dashboard() {
           );
         })()}
 
+        {/* C2. Correlation Insights */}
+        {(() => {
+          // Build correlation insights from 14-day check-in data
+          const raw = recentCheckIns.filter((c: any) => c.date);
+          if (raw.length < 3) return null;
+
+          type Insight = { text: string; type: "positive" | "negative" | "neutral" };
+          const insights: Insight[] = [];
+
+          // Helper: split check-ins by a threshold and compare averages of another metric
+          function compareByThreshold(
+            entries: any[],
+            splitKey: string,
+            splitThreshold: number,
+            compareKey: string,
+            splitLabel: string,
+            compareLabel: string,
+            below: boolean, // true = "under threshold", false = "over threshold"
+            minDiff: number = 1.0
+          ) {
+            const low = entries.filter(c => c[splitKey] != null && c[compareKey] != null && (below ? c[splitKey] < splitThreshold : c[splitKey] >= splitThreshold));
+            const high = entries.filter(c => c[splitKey] != null && c[compareKey] != null && (below ? c[splitKey] >= splitThreshold : c[splitKey] < splitThreshold));
+            if (low.length < 2 || high.length < 2) return null;
+            const avgLow = low.reduce((s: number, c: any) => s + c[compareKey], 0) / low.length;
+            const avgHigh = high.reduce((s: number, c: any) => s + c[compareKey], 0) / high.length;
+            const diff = Math.round(Math.abs(avgLow - avgHigh) * 10) / 10;
+            if (diff < minDiff) return null;
+            return { avgLow, avgHigh, diff, lowCount: low.length, highCount: high.length };
+          }
+
+          // 1. Sleep hours vs Pain
+          const sleepPain = compareByThreshold(raw, 'sleepHours', 6, 'painLevel', 'sleep', 'pain', true, 1.0);
+          if (sleepPain && sleepPain.avgLow > sleepPain.avgHigh) {
+            insights.push({ text: `Your pain scores are ${sleepPain.diff}pts higher on days you sleep under 6hrs`, type: 'negative' });
+          }
+
+          // 2. Sleep hours vs Mood
+          const sleepMood = compareByThreshold(raw, 'sleepHours', 7, 'mood', 'sleep', 'mood', false, 1.0);
+          if (sleepMood && sleepMood.avgLow > sleepMood.avgHigh) {
+            insights.push({ text: `Your mood is ${sleepMood.diff}pts higher on days you sleep 7+ hours`, type: 'positive' });
+          }
+
+          // 3. Sleep hours vs Energy
+          const sleepEnergy = compareByThreshold(raw, 'sleepHours', 7, 'energyLevel', 'sleep', 'energy', false, 1.0);
+          if (sleepEnergy && sleepEnergy.avgLow > sleepEnergy.avgHigh) {
+            insights.push({ text: `Your energy is ${sleepEnergy.diff}pts higher when you get 7+ hours of sleep`, type: 'positive' });
+          }
+
+          // 4. Stress vs Sleep quality
+          const stressSleep = compareByThreshold(raw, 'stressLevel', 7, 'sleepQuality', 'stress', 'sleep quality', true, 1.0);
+          if (stressSleep && stressSleep.avgLow < stressSleep.avgHigh) {
+            insights.push({ text: `Your sleep quality drops ${stressSleep.diff}pts on high-stress days (7+)`, type: 'negative' });
+          }
+
+          // 5. Stress vs Mood
+          const stressMood = compareByThreshold(raw, 'stressLevel', 6, 'mood', 'stress', 'mood', true, 1.0);
+          if (stressMood && stressMood.avgLow < stressMood.avgHigh) {
+            insights.push({ text: `Your mood is ${stressMood.diff}pts lower on days with stress above 6`, type: 'negative' });
+          }
+
+          // 6. Exercise vs Mood
+          const exerciseMood = compareByThreshold(raw, 'exerciseDuration', 20, 'mood', 'exercise', 'mood', false, 0.8);
+          if (exerciseMood && exerciseMood.avgLow > exerciseMood.avgHigh) {
+            insights.push({ text: `Your mood is ${exerciseMood.diff}pts higher on days you exercise 20+ minutes`, type: 'positive' });
+          }
+
+          // 7. Exercise vs Energy
+          const exerciseEnergy = compareByThreshold(raw, 'exerciseDuration', 20, 'energyLevel', 'exercise', 'energy', false, 0.8);
+          if (exerciseEnergy && exerciseEnergy.avgLow > exerciseEnergy.avgHigh) {
+            insights.push({ text: `Your energy is ${exerciseEnergy.diff}pts higher on active days (20+ min exercise)`, type: 'positive' });
+          }
+
+          // 8. Steps vs Energy
+          const stepEnergy = compareByThreshold(raw, 'steps', 5000, 'energyLevel', 'steps', 'energy', false, 0.8);
+          if (stepEnergy && stepEnergy.avgLow > stepEnergy.avgHigh) {
+            insights.push({ text: `Your energy is ${stepEnergy.diff}pts higher on days with 5000+ steps`, type: 'positive' });
+          }
+
+          // 9. Pain vs Mood
+          const painMood = compareByThreshold(raw, 'painLevel', 5, 'mood', 'pain', 'mood', true, 1.0);
+          if (painMood && painMood.avgLow < painMood.avgHigh) {
+            insights.push({ text: `Your mood drops ${painMood.diff}pts on high-pain days (5+)`, type: 'negative' });
+          }
+
+          // 10. Water vs Energy
+          const waterEnergy = compareByThreshold(raw, 'waterMl', 1500, 'energyLevel', 'water', 'energy', false, 0.8);
+          if (waterEnergy && waterEnergy.avgLow > waterEnergy.avgHigh) {
+            insights.push({ text: `Your energy is ${waterEnergy.diff}pts higher when you drink 1.5L+ water`, type: 'positive' });
+          }
+
+          if (insights.length === 0) return null;
+
+          // Show top 3 most impactful insights (highest diff)
+          const top = insights.slice(0, 3);
+
+          return (
+            <div className="vitallity-card" data-testid="correlation-insights-card">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Your Patterns</p>
+              </div>
+              <div className="space-y-2.5">
+                {top.map((insight, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-2.5 px-3.5 py-3 rounded-xl text-xs leading-relaxed ${
+                      insight.type === 'positive'
+                        ? 'bg-primary/6 text-primary border border-primary/10'
+                        : insight.type === 'negative'
+                        ? 'bg-red-50 text-red-700 border border-red-100'
+                        : 'bg-gray-50 text-gray-600 border border-gray-100'
+                    }`}
+                    data-testid={`insight-${i}`}
+                  >
+                    <span className="shrink-0 mt-0.5">
+                      {insight.type === 'positive' ? (
+                        <TrendingUp className="w-3.5 h-3.5" />
+                      ) : insight.type === 'negative' ? (
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                      ) : (
+                        <Zap className="w-3.5 h-3.5" />
+                      )}
+                    </span>
+                    <span className="font-medium">{insight.text}</span>
+                  </div>
+                ))}
+              </div>
+              {insights.length > 3 && (
+                <p className="text-[10px] text-gray-400 mt-2 text-center">+ {insights.length - 3} more patterns detected</p>
+              )}
+            </div>
+          );
+        })()}
+
         {/* D. Weekly Macro Summary */}
         <div className="vitallity-card" data-testid="macro-summary-card">
           <div className="flex items-center gap-2 mb-3">
