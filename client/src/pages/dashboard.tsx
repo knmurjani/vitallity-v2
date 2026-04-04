@@ -201,6 +201,7 @@ export default function Dashboard() {
 
   const profile = data?.profile;
   const goals = data?.goals || [];
+  const conditions = (data?.conditions || []).map((c: any) => (c.conditionName || c.condition_name || '').toLowerCase());
   const dashMilestones = data?.milestones || [];
   const recentCheckIns = data?.recentCheckIns || [];
   const stats = data?.stats || { checkInCount: 0, activeMilestones: 0 };
@@ -850,6 +851,141 @@ export default function Dashboard() {
           const waterEnergy = compareByThreshold(raw, 'waterMl', 1500, 'energyLevel', 'water', 'energy', false, 0.8);
           if (waterEnergy && waterEnergy.avgLow > waterEnergy.avgHigh) {
             insights.push({ text: `Your energy is ${waterEnergy.diff}pts higher when you drink 1.5L+ water`, type: 'positive' });
+          }
+
+          // ── Condition-specific correlations ──
+          const has = (term: string) => conditions.some((c: string) => c.includes(term));
+
+          // Fibromyalgia: flare days (pain 6+) vs prior night sleep and hydration
+          if (has('fibromyalgia')) {
+            const sleepFibro = compareByThreshold(raw, 'sleepHours', 7, 'painLevel', 'sleep', 'pain', true, 0.8);
+            if (sleepFibro && sleepFibro.avgLow > sleepFibro.avgHigh) {
+              insights.push({ text: `Fibromyalgia: your flare-ups average ${sleepFibro.diff}pts worse after sleeping under 7hrs`, type: 'negative' });
+            }
+            const waterFibro = compareByThreshold(raw, 'waterMl', 1500, 'painLevel', 'water', 'pain', true, 0.8);
+            if (waterFibro && waterFibro.avgLow > waterFibro.avgHigh) {
+              insights.push({ text: `Fibromyalgia: pain is ${waterFibro.diff}pts higher on days with under 1.5L water`, type: 'negative' });
+            }
+            const stressFibro = compareByThreshold(raw, 'stressLevel', 6, 'painLevel', 'stress', 'pain', false, 0.8);
+            if (stressFibro && stressFibro.avgLow > stressFibro.avgHigh) {
+              insights.push({ text: `Fibromyalgia: stress above 6 correlates with ${stressFibro.diff}pts more pain`, type: 'negative' });
+            }
+          }
+
+          // Arthritis: pain vs exercise and temperature (we use sleep quality as proxy for rest)
+          if (has('arthritis')) {
+            const exerciseArth = compareByThreshold(raw, 'exerciseDuration', 15, 'painLevel', 'exercise', 'pain', false, 0.8);
+            if (exerciseArth && exerciseArth.avgLow < exerciseArth.avgHigh) {
+              insights.push({ text: `Arthritis: gentle movement (15+ min) correlates with ${exerciseArth.diff}pts less joint pain`, type: 'positive' });
+            }
+            const restArth = compareByThreshold(raw, 'sleepQuality', 6, 'painLevel', 'sleep quality', 'pain', false, 0.8);
+            if (restArth && restArth.avgLow < restArth.avgHigh) {
+              insights.push({ text: `Arthritis: good sleep quality (6+) correlates with ${restArth.diff}pts less pain next day`, type: 'positive' });
+            }
+          }
+
+          // Diabetes (Type 1 or 2): stress and sleep vs energy (blood sugar proxy)
+          if (has('diabetes')) {
+            const stressDiab = compareByThreshold(raw, 'stressLevel', 6, 'energyLevel', 'stress', 'energy', true, 0.8);
+            if (stressDiab && stressDiab.avgLow < stressDiab.avgHigh) {
+              insights.push({ text: `Diabetes: high stress days (6+) correlate with ${stressDiab.diff}pts lower energy -- stress spikes blood sugar`, type: 'negative' });
+            }
+            const sleepDiab = compareByThreshold(raw, 'sleepHours', 7, 'energyLevel', 'sleep', 'energy', false, 0.8);
+            if (sleepDiab && sleepDiab.avgLow > sleepDiab.avgHigh) {
+              insights.push({ text: `Diabetes: 7+ hours sleep correlates with ${sleepDiab.diff}pts better energy -- sleep helps insulin sensitivity`, type: 'positive' });
+            }
+          }
+
+          // Hypertension: stress and exercise vs overall wellness
+          if (has('hypertension') || has('high bp')) {
+            const stressBP = compareByThreshold(raw, 'stressLevel', 7, 'sleepQuality', 'stress', 'sleep', true, 0.8);
+            if (stressBP && stressBP.avgLow < stressBP.avgHigh) {
+              insights.push({ text: `Hypertension: high stress (7+) correlates with ${stressBP.diff}pts worse sleep -- both raise blood pressure`, type: 'negative' });
+            }
+            const exerciseBP = compareByThreshold(raw, 'steps', 4000, 'mood', 'steps', 'mood', false, 0.8);
+            if (exerciseBP && exerciseBP.avgLow > exerciseBP.avgHigh) {
+              insights.push({ text: `Hypertension: 4000+ steps days correlate with ${exerciseBP.diff}pts better mood -- movement helps regulate BP`, type: 'positive' });
+            }
+          }
+
+          // Thyroid: sleep and energy patterns
+          if (has('thyroid')) {
+            const sleepThyroid = compareByThreshold(raw, 'sleepHours', 8, 'energyLevel', 'sleep', 'energy', false, 0.8);
+            if (sleepThyroid && sleepThyroid.avgLow > sleepThyroid.avgHigh) {
+              insights.push({ text: `Thyroid: 8+ hours sleep correlates with ${sleepThyroid.diff}pts more energy -- thyroid conditions need extra rest`, type: 'positive' });
+            }
+          }
+
+          // Depression/Anxiety: exercise and sleep as mood regulators
+          if (has('depression') || has('anxiety')) {
+            const exerciseMH = compareByThreshold(raw, 'exerciseDuration', 20, 'mood', 'exercise', 'mood', false, 0.8);
+            if (exerciseMH && exerciseMH.avgLow > exerciseMH.avgHigh) {
+              insights.push({ text: `Mental health: 20+ min exercise correlates with ${exerciseMH.diff}pts better mood -- consistent with clinical evidence`, type: 'positive' });
+            }
+            const sleepMH = compareByThreshold(raw, 'sleepQuality', 6, 'mood', 'sleep', 'mood', false, 0.8);
+            if (sleepMH && sleepMH.avgLow > sleepMH.avgHigh) {
+              insights.push({ text: `Mental health: good sleep (quality 6+) correlates with ${sleepMH.diff}pts higher mood`, type: 'positive' });
+            }
+          }
+
+          // Chronic back pain / sciatica / spondylosis
+          if (has('back pain') || has('sciatica') || has('spondylosis')) {
+            const exerciseBack = compareByThreshold(raw, 'exerciseDuration', 15, 'painLevel', 'exercise', 'pain', false, 0.8);
+            if (exerciseBack && exerciseBack.avgLow < exerciseBack.avgHigh) {
+              insights.push({ text: `Back/spine: gentle daily movement (15+ min) correlates with ${exerciseBack.diff}pts less pain`, type: 'positive' });
+            }
+            const stressBack = compareByThreshold(raw, 'stressLevel', 6, 'painLevel', 'stress', 'pain', false, 0.8);
+            if (stressBack && stressBack.avgLow > stressBack.avgHigh) {
+              insights.push({ text: `Back/spine: stress above 6 correlates with ${stressBack.diff}pts more pain -- tension aggravates spinal issues`, type: 'negative' });
+            }
+          }
+
+          // Knee issues / ACL
+          if (has('knee') || has('acl')) {
+            const stepsKnee = compareByThreshold(raw, 'steps', 8000, 'painLevel', 'steps', 'pain', false, 0.8);
+            if (stepsKnee && stepsKnee.avgLow > stepsKnee.avgHigh) {
+              insights.push({ text: `Knee: pain is ${stepsKnee.diff}pts higher on days exceeding 8000 steps -- consider lower-impact activity`, type: 'negative' });
+            }
+          }
+
+          // PCOD/PCOS: stress and sleep affect hormones
+          if (has('pcod') || has('pcos')) {
+            const stressPCOS = compareByThreshold(raw, 'stressLevel', 6, 'sleepQuality', 'stress', 'sleep', true, 0.8);
+            if (stressPCOS && stressPCOS.avgLow < stressPCOS.avgHigh) {
+              insights.push({ text: `PCOS: high stress (6+) correlates with ${stressPCOS.diff}pts worse sleep -- stress disrupts hormonal balance`, type: 'negative' });
+            }
+          }
+
+          // Migraine: sleep and stress triggers
+          if (has('migraine')) {
+            const sleepMigraine = compareByThreshold(raw, 'sleepHours', 6, 'painLevel', 'sleep', 'pain', true, 0.8);
+            if (sleepMigraine && sleepMigraine.avgLow > sleepMigraine.avgHigh) {
+              insights.push({ text: `Migraine: pain is ${sleepMigraine.diff}pts worse after under 6hrs sleep -- sleep disruption is a top trigger`, type: 'negative' });
+            }
+            const stressMigraine = compareByThreshold(raw, 'stressLevel', 7, 'painLevel', 'stress', 'pain', false, 0.8);
+            if (stressMigraine && stressMigraine.avgLow > stressMigraine.avgHigh) {
+              insights.push({ text: `Migraine: stress 7+ days correlate with ${stressMigraine.diff}pts higher pain scores`, type: 'negative' });
+            }
+          }
+
+          // IBS / Digestive
+          if (has('ibs') || has('digestive')) {
+            const stressIBS = compareByThreshold(raw, 'stressLevel', 6, 'painLevel', 'stress', 'pain', false, 0.8);
+            if (stressIBS && stressIBS.avgLow > stressIBS.avgHigh) {
+              insights.push({ text: `Digestive: stress above 6 correlates with ${stressIBS.diff}pts more discomfort -- gut-brain axis at work`, type: 'negative' });
+            }
+            const sleepIBS = compareByThreshold(raw, 'sleepQuality', 6, 'painLevel', 'sleep', 'pain', false, 0.8);
+            if (sleepIBS && sleepIBS.avgLow < sleepIBS.avgHigh) {
+              insights.push({ text: `Digestive: good sleep (6+) correlates with ${sleepIBS.diff}pts less gut discomfort`, type: 'positive' });
+            }
+          }
+
+          // Sleep Apnea
+          if (has('sleep apnea') || has('apnea')) {
+            const apneaEnergy = compareByThreshold(raw, 'sleepHours', 8, 'energyLevel', 'sleep', 'energy', false, 0.8);
+            if (apneaEnergy && apneaEnergy.avgLow > apneaEnergy.avgHigh) {
+              insights.push({ text: `Sleep apnea: 8+ hours correlates with ${apneaEnergy.diff}pts more energy -- you may need extra time to compensate for disrupted sleep`, type: 'positive' });
+            }
           }
 
           if (insights.length === 0) return null;
