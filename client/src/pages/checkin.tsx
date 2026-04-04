@@ -19,6 +19,9 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { FOOD_DATABASE, searchFoods, type FoodItem } from "@shared/foods";
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 
 // ==================== TYPES ====================
 interface CheckInData {
@@ -1143,6 +1146,135 @@ export default function CheckIn() {
                 <p className="text-xs text-text-mid text-center">Quick insights based on your data</p>
               </div>
             )}
+
+            {/* Condition-specific correlation patterns from check-in history */}
+            {(() => {
+              const history = dashData?.recentCheckIns || [];
+              const userConditions = (dashData?.conditions || []).map((c: any) => (c.conditionName || '').toLowerCase());
+              if (history.length < 3 || userConditions.length === 0) return null;
+
+              const has = (term: string) => userConditions.some((c: string) => c.includes(term));
+
+              function splitCompare(entries: any[], splitKey: string, threshold: number, compareKey: string, above: boolean) {
+                const groupA = entries.filter(c => c[splitKey] != null && c[compareKey] != null && (above ? c[splitKey] >= threshold : c[splitKey] < threshold));
+                const groupB = entries.filter(c => c[splitKey] != null && c[compareKey] != null && (above ? c[splitKey] < threshold : c[splitKey] >= threshold));
+                if (groupA.length < 2 || groupB.length < 2) return null;
+                const avgA = groupA.reduce((s: number, c: any) => s + c[compareKey], 0) / groupA.length;
+                const avgB = groupB.reduce((s: number, c: any) => s + c[compareKey], 0) / groupB.length;
+                const diff = Math.round(Math.abs(avgA - avgB) * 10) / 10;
+                if (diff < 0.8) return null;
+                return { avgA, avgB, diff };
+              }
+
+              type CondInsight = { text: string; condition: string; chartData?: any[]; metricA: string; metricB: string; colorA: string; colorB: string };
+              const condInsights: CondInsight[] = [];
+
+              // Build 7-day chart data from history
+              const last7 = history.slice(0, 7).reverse();
+
+              if (has('fibromyalgia')) {
+                const r = splitCompare(history, 'sleepHours', 7, 'painLevel', false);
+                if (r && r.avgA > r.avgB) {
+                  condInsights.push({
+                    text: `Fibromyalgia: flare pain is ${r.diff}pts worse after under 7hrs sleep`,
+                    condition: 'Fibromyalgia', metricA: 'Sleep (hrs)', metricB: 'Pain',
+                    colorA: '#6366F1', colorB: '#8B5CF6',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Sleep: c.sleepHours || null, Pain: c.painLevel || null }))
+                  });
+                }
+                const w = splitCompare(history, 'waterMl', 1500, 'painLevel', false);
+                if (w && w.avgA > w.avgB) {
+                  condInsights.push({ text: `Fibromyalgia: pain is ${w.diff}pts higher with under 1.5L water`, condition: 'Fibromyalgia', metricA: 'Water (L)', metricB: 'Pain', colorA: '#3B82F6', colorB: '#8B5CF6',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Water: c.waterMl ? Math.round(c.waterMl / 100) / 10 : null, Pain: c.painLevel || null })) });
+                }
+              }
+              if (has('diabetes')) {
+                const r = splitCompare(history, 'stressLevel', 6, 'energyLevel', true);
+                if (r && r.avgA < r.avgB) {
+                  condInsights.push({ text: `Diabetes: high stress correlates with ${r.diff}pts lower energy (blood sugar impact)`, condition: 'Diabetes', metricA: 'Stress', metricB: 'Energy', colorA: '#EF4444', colorB: '#F59E0B',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Stress: c.stressLevel || null, Energy: c.energyLevel || null })) });
+                }
+              }
+              if (has('arthritis')) {
+                const r = splitCompare(history, 'exerciseDuration', 15, 'painLevel', true);
+                if (r && r.avgA < r.avgB) {
+                  condInsights.push({ text: `Arthritis: gentle movement (15+ min) correlates with ${r.diff}pts less pain`, condition: 'Arthritis', metricA: 'Exercise (min)', metricB: 'Pain', colorA: '#2C5E3F', colorB: '#8B5CF6',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Exercise: c.exerciseDuration || null, Pain: c.painLevel || null })) });
+                }
+              }
+              if (has('hypertension') || has('high bp')) {
+                const r = splitCompare(history, 'stressLevel', 7, 'sleepQuality', true);
+                if (r && r.avgA < r.avgB) {
+                  condInsights.push({ text: `Hypertension: high stress (7+) correlates with ${r.diff}pts worse sleep`, condition: 'Hypertension', metricA: 'Stress', metricB: 'Sleep Quality', colorA: '#EF4444', colorB: '#6366F1',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Stress: c.stressLevel || null, Sleep: c.sleepQuality || null })) });
+                }
+              }
+              if (has('thyroid')) {
+                const r = splitCompare(history, 'sleepHours', 8, 'energyLevel', true);
+                if (r && r.avgA > r.avgB) {
+                  condInsights.push({ text: `Thyroid: 8+ hours sleep correlates with ${r.diff}pts more energy`, condition: 'Thyroid', metricA: 'Sleep (hrs)', metricB: 'Energy', colorA: '#6366F1', colorB: '#F59E0B',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Sleep: c.sleepHours || null, Energy: c.energyLevel || null })) });
+                }
+              }
+              if (has('migraine')) {
+                const r = splitCompare(history, 'sleepHours', 6, 'painLevel', false);
+                if (r && r.avgA > r.avgB) {
+                  condInsights.push({ text: `Migraine: pain is ${r.diff}pts worse after under 6hrs sleep`, condition: 'Migraine', metricA: 'Sleep (hrs)', metricB: 'Pain', colorA: '#6366F1', colorB: '#8B5CF6',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Sleep: c.sleepHours || null, Pain: c.painLevel || null })) });
+                }
+              }
+              if (has('depression') || has('anxiety')) {
+                const r = splitCompare(history, 'exerciseDuration', 20, 'mood', true);
+                if (r && r.avgA > r.avgB) {
+                  condInsights.push({ text: `Mental health: 20+ min exercise correlates with ${r.diff}pts better mood`, condition: 'Mental Health', metricA: 'Exercise (min)', metricB: 'Mood', colorA: '#2C5E3F', colorB: '#F59E0B',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Exercise: c.exerciseDuration || null, Mood: c.mood || null })) });
+                }
+              }
+              if (has('ibs') || has('digestive')) {
+                const r = splitCompare(history, 'stressLevel', 6, 'painLevel', true);
+                if (r && r.avgA > r.avgB) {
+                  condInsights.push({ text: `Digestive: stress above 6 correlates with ${r.diff}pts more discomfort`, condition: 'IBS', metricA: 'Stress', metricB: 'Pain', colorA: '#EF4444', colorB: '#8B5CF6',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Stress: c.stressLevel || null, Pain: c.painLevel || null })) });
+                }
+              }
+              if (has('back pain') || has('sciatica') || has('spondylosis')) {
+                const r = splitCompare(history, 'stressLevel', 6, 'painLevel', true);
+                if (r && r.avgA > r.avgB) {
+                  condInsights.push({ text: `Back/spine: stress above 6 correlates with ${r.diff}pts more pain`, condition: 'Back Pain', metricA: 'Stress', metricB: 'Pain', colorA: '#EF4444', colorB: '#8B5CF6',
+                    chartData: last7.map((c: any) => ({ d: c.date?.slice(5) || '', Stress: c.stressLevel || null, Pain: c.painLevel || null })) });
+                }
+              }
+
+              if (condInsights.length === 0) return null;
+              const top = condInsights.slice(0, 2);
+
+              return (
+                <div className="mb-6 space-y-3" data-testid="condition-correlations">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Your condition patterns</p>
+                  {top.map((ci, i) => (
+                    <div key={i} className="vitallity-card border-l-4 border-l-primary/60 p-4">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Activity className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-[10px] font-semibold text-primary uppercase tracking-wide">{ci.condition}</span>
+                      </div>
+                      <p className="text-sm text-gray-800 font-medium mb-3">{ci.text}</p>
+                      {ci.chartData && ci.chartData.some((d: any) => Object.values(d).some(v => v !== null && typeof v === 'number')) && (
+                        <ResponsiveContainer width="100%" height={100}>
+                          <LineChart data={ci.chartData} margin={{ top: 4, right: 4, bottom: 0, left: -30 }}>
+                            <XAxis dataKey="d" tick={{ fontSize: 9, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 9, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                            <Tooltip contentStyle={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 10, fontSize: 11 }} />
+                            <Line type="monotone" dataKey={ci.metricA.split(' ')[0]} stroke={ci.colorA} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                            <Line type="monotone" dataKey={ci.metricB.split(' ')[0]} stroke={ci.colorB} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                            <Legend iconType="circle" iconSize={5} wrapperStyle={{ fontSize: 9, paddingTop: 2 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             {/* Motivation card */}
             <div className="bg-gradient-to-br from-[#2C5E3F] to-[#3A7A52] rounded-2xl p-6 mb-6">

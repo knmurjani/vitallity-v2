@@ -769,7 +769,7 @@ export default function Dashboard() {
           const raw = recentCheckIns.filter((c: any) => c.date);
           if (raw.length < 3) return null;
 
-          type Insight = { text: string; type: "positive" | "negative" | "neutral" };
+          type Insight = { text: string; type: "positive" | "negative" | "neutral"; chartData?: any[]; lineA?: string; lineB?: string; colorA?: string; colorB?: string };
           const insights: Insight[] = [];
 
           // Helper: split check-ins by a threshold and compare averages of another metric
@@ -793,22 +793,31 @@ export default function Dashboard() {
             return { avgLow, avgHigh, diff, lowCount: low.length, highCount: high.length };
           }
 
+          // Build 7-day chart data for visual insights
+          const last7raw = raw.slice(0, 7).reverse().map((c: any) => ({ d: c.date?.slice(5) || '', ...c }));
+
           // 1. Sleep hours vs Pain
           const sleepPain = compareByThreshold(raw, 'sleepHours', 6, 'painLevel', 'sleep', 'pain', true, 1.0);
           if (sleepPain && sleepPain.avgLow > sleepPain.avgHigh) {
-            insights.push({ text: `Your pain scores are ${sleepPain.diff}pts higher on days you sleep under 6hrs`, type: 'negative' });
+            insights.push({ text: `Your pain scores are ${sleepPain.diff}pts higher on days you sleep under 6hrs`, type: 'negative',
+              chartData: last7raw.map(c => ({ d: c.d, Sleep: c.sleepHours || null, Pain: c.painLevel || null })),
+              lineA: 'Sleep', lineB: 'Pain', colorA: '#6366F1', colorB: '#8B5CF6' });
           }
 
           // 2. Sleep hours vs Mood
           const sleepMood = compareByThreshold(raw, 'sleepHours', 7, 'mood', 'sleep', 'mood', false, 1.0);
           if (sleepMood && sleepMood.avgLow > sleepMood.avgHigh) {
-            insights.push({ text: `Your mood is ${sleepMood.diff}pts higher on days you sleep 7+ hours`, type: 'positive' });
+            insights.push({ text: `Your mood is ${sleepMood.diff}pts higher on days you sleep 7+ hours`, type: 'positive',
+              chartData: last7raw.map(c => ({ d: c.d, Sleep: c.sleepHours || null, Mood: c.mood || null })),
+              lineA: 'Sleep', lineB: 'Mood', colorA: '#6366F1', colorB: '#2C5E3F' });
           }
 
           // 3. Sleep hours vs Energy
           const sleepEnergy = compareByThreshold(raw, 'sleepHours', 7, 'energyLevel', 'sleep', 'energy', false, 1.0);
           if (sleepEnergy && sleepEnergy.avgLow > sleepEnergy.avgHigh) {
-            insights.push({ text: `Your energy is ${sleepEnergy.diff}pts higher when you get 7+ hours of sleep`, type: 'positive' });
+            insights.push({ text: `Your energy is ${sleepEnergy.diff}pts higher when you get 7+ hours of sleep`, type: 'positive',
+              chartData: last7raw.map(c => ({ d: c.d, Sleep: c.sleepHours || null, Energy: c.energyLevel || null })),
+              lineA: 'Sleep', lineB: 'Energy', colorA: '#6366F1', colorB: '#F59E0B' });
           }
 
           // 4. Stress vs Sleep quality
@@ -1025,6 +1034,31 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
+              {/* Mini trend chart for the top insight with chart data */}
+              {(() => {
+                const chartInsight = top.find(i => i.chartData && i.lineA && i.lineB);
+                if (!chartInsight || !chartInsight.chartData) return null;
+                const hasValues = chartInsight.chartData.some((d: any) => {
+                  const vals = Object.values(d).filter(v => typeof v === 'number');
+                  return vals.length >= 2;
+                });
+                if (!hasValues) return null;
+                return (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-[10px] text-gray-400 mb-1.5">7-day trend: {chartInsight.lineA} vs {chartInsight.lineB}</p>
+                    <ResponsiveContainer width="100%" height={90}>
+                      <LineChart data={chartInsight.chartData} margin={{ top: 4, right: 4, bottom: 0, left: -30 }}>
+                        <XAxis dataKey="d" tick={{ fontSize: 9, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 9, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 10, fontSize: 11, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }} />
+                        <Line type="monotone" dataKey={chartInsight.lineA} stroke={chartInsight.colorA} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
+                        <Line type="monotone" dataKey={chartInsight.lineB} stroke={chartInsight.colorB} strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
+                        <Legend iconType="circle" iconSize={5} wrapperStyle={{ fontSize: 9, paddingTop: 2 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
               {insights.length > 3 && (
                 <p className="text-[10px] text-gray-400 mt-2 text-center">+ {insights.length - 3} more patterns detected</p>
               )}
