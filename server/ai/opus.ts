@@ -5,7 +5,7 @@ export async function callOpus(systemPrompt: string, userMessage: string): Promi
   const timeout = setTimeout(() => controller.abort(), 35000);
   try {
     const response = await getClient().messages.create({
-      model: "claude_opus_4_6",
+      model: "claude-opus-4-6",
       max_tokens: 4000,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],

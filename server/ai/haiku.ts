@@ -5,7 +5,7 @@ export async function callHaiku(systemPrompt: string, userMessage: string): Prom
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
     const response = await getClient().messages.create({
-      model: "claude_haiku_4_5",
+      model: "claude-haiku-4-5",
       max_tokens: 500,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
