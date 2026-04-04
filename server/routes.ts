@@ -9,7 +9,7 @@ import { searchFoods } from "@shared/foods";
 import { callHaiku } from "./ai/haiku";
 import { callSonnet } from "./ai/sonnet";
 import { callOpus } from "./ai/opus";
-import { getUserContext, buildInsightSystemPrompt, buildChatSystemPrompt, buildMotivationPrompt, buildWeeklyReviewPrompt, buildHealthSummarySystemPrompt } from "./ai/prompts";
+import { getUserContext, buildInsightSystemPrompt, buildChatSystemPrompt, buildMotivationPrompt, buildWeeklyReviewPrompt, buildHealthSummarySystemPrompt, buildOnboardingChatSystemPrompt } from "./ai/prompts";
 import { getHealthContext, getCalibrationContext, computeCalibrationAdjustment } from "./ai/health-context";
 import { checkAndAwardBadges } from "./badges";
 import { handleTelegramWebhook, isTelegramConfigured, sendReminders } from "./telegram";
@@ -962,6 +962,54 @@ export async function registerRoutes(
       }
 
       res.json(summary);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
+  // POST /api/ai/onboarding-chat
+  app.post("/api/ai/onboarding-chat", extractUser, async (req: Request, res: Response) => {
+    try {
+      const { messages, currentData } = req.body as {
+        messages: { role: string; content: string }[];
+        currentData: Record<string, unknown>;
+      };
+
+      if (!Array.isArray(messages)) {
+        res.status(400).json({ message: "messages must be an array" });
+        return;
+      }
+
+      const systemPrompt = buildOnboardingChatSystemPrompt();
+      const aiResponse = await callSonnet(systemPrompt, messages);
+
+      let parsed: {
+        reply: string;
+        quickReplies: string[];
+        extractedData: Record<string, unknown>;
+        nextTopic: string;
+        isComplete: boolean;
+        visualElement: string | null;
+      };
+
+      try {
+        let cleaned = aiResponse.trim();
+        if (cleaned.startsWith("```")) {
+          cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+        }
+        parsed = JSON.parse(cleaned);
+      } catch {
+        parsed = {
+          reply: aiResponse,
+          quickReplies: [],
+          extractedData: {},
+          nextTopic: "basics",
+          isComplete: false,
+          visualElement: null,
+        };
+      }
+
+      res.json(parsed);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Server error" });
     }

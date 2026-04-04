@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useLocation } from "wouter";
 import { useAuth, useAuthFetch } from "@/hooks/use-auth";
 import { ChipGroup, Chip } from "@/components/ui/chip";
 import { RangeSlider } from "@/components/ui/range-slider";
@@ -497,7 +498,9 @@ const ENCOURAGING_SUBTITLES: Record<number, string> = {
 export default function Onboarding() {
   const { user, refreshUser } = useAuth();
   const authFetch = useAuthFetch();
-  const [step, setStep] = useState(user?.onboardingStep || 1);
+  const [, navigate] = useLocation();
+  // step 0 = choice screen; step 1+ = existing form flow
+  const [step, setStep] = useState(0);
   const [data, setData] = useState<OnboardingData>(defaultData);
   const [saving, setSaving] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
@@ -511,7 +514,13 @@ export default function Onboarding() {
     authFetch("GET", "/api/onboarding/progress")
       .then(res => res.json())
       .then(progress => {
-        if (progress.step) setStep(Math.min(progress.step, TOTAL_STEPS));
+        // If user has already started the form (step > 0 in DB), skip choice screen
+        if (progress.step && progress.step > 0) {
+          setStep(Math.min(progress.step, TOTAL_STEPS));
+        } else {
+          // Show choice screen (step 0)
+          setStep(0);
+        }
         const d = progress.data;
         if (d?.profile) {
           const p = d.profile;
@@ -775,6 +784,75 @@ export default function Onboarding() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  // ─── Step 0: Choice Screen ───────────────────────────────────
+  if (step === 0) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-5" data-testid="onboarding-choice-screen">
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/40 z-20" />
+        <div className="w-full max-w-[480px]">
+          {/* Logo */}
+          <div className="flex items-center gap-2 mb-8">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-label="Vitallity">
+              <rect x="2" y="2" width="28" height="28" rx="6" stroke="hsl(var(--primary))" strokeWidth="2.5" />
+              <path d="M9 17L13 22L23 10" stroke="hsl(var(--primary))" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-base font-semibold tracking-tight">Vitallity</span>
+          </div>
+
+          <h1 className="font-display text-xl font-bold tracking-tight mb-1">
+            How would you like to set up your profile?
+          </h1>
+          <p className="text-gray-500 text-sm mb-8">
+            Choose the setup experience that works best for you.
+          </p>
+
+          {/* Option 1: Guided Consultation (default) */}
+          <button
+            type="button"
+            onClick={() => navigate("/onboarding-chat")}
+            className="w-full text-left rounded-2xl border-2 border-primary bg-primary/5 p-5 mb-3 hover:bg-primary/10 transition-colors group"
+            data-testid="choice-guided-consultation"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold text-sm">Guided Consultation</span>
+                  <span className="text-[10px] bg-primary text-white px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Recommended</span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Chat with your AI coach to build your personalized plan. Takes about 5-7 minutes.
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Option 2: Quick Setup */}
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className="w-full text-left rounded-2xl border border-gray-200 bg-white p-5 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+            data-testid="choice-quick-setup"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
+                <ListChecks className="w-5 h-5 text-gray-600" />
+              </div>
+              <div className="flex-1">
+                <span className="font-semibold text-sm block mb-1">Quick Setup</span>
+                <p className="text-xs text-gray-500">
+                  Fill out a structured questionnaire. Takes about 8-10 minutes.
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
     );
   }

@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AuthPage from "@/pages/auth";
 import Onboarding from "@/pages/onboarding";
+import OnboardingChat from "@/pages/onboarding-chat";
 import Dashboard from "@/pages/dashboard";
 import CheckIn from "@/pages/checkin";
 import Settings from "@/pages/settings";
@@ -195,6 +196,7 @@ function AppRouter() {
     return (
       <Switch>
         <Route path="/onboarding" component={Onboarding} />
+        <Route path="/onboarding-chat" component={OnboardingChat} />
         <Route>
           <Redirect to="/onboarding" />
         </Route>
