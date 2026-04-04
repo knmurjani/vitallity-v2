@@ -21,7 +21,7 @@ function WhyWeAsk({ text }: { text: string }) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-text-light hover:bg-primary/10 hover:text-primary transition-colors"
+        className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-gray-500 hover:bg-primary/10 hover:text-primary transition-colors"
         aria-label="Why we ask"
         data-testid="why-we-ask"
       >
@@ -30,7 +30,7 @@ function WhyWeAsk({ text }: { text: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-card border border-border rounded-[12px] p-3 shadow-card text-xs text-text-mid leading-relaxed animate-scale-in" data-testid="why-we-ask-tooltip">
+          <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-card border border-gray-200 rounded-[12px] p-3 shadow-card text-xs text-gray-700 leading-relaxed animate-scale-in" data-testid="why-we-ask-tooltip">
             {text}
           </div>
         </>
@@ -749,28 +749,28 @@ export default function Onboarding() {
 
   if (!initialLoaded) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Subtle gradient header accent */}
-      <div className="fixed top-0 left-0 right-0 h-32 pointer-events-none z-0" style={{ background: "linear-gradient(to bottom, rgba(26,58,42,0.05) 0%, transparent 100%)" }} />
-      <div className="max-w-[560px] mx-auto px-5 py-6 pb-32 relative z-10">
+    <div className="min-h-screen bg-white">
+      {/* Clean top accent line */}
+      <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/40 z-20" />
+      <div className="max-w-[560px] mx-auto px-5 pt-8 pb-32 relative z-10">
         {/* Phase indicator */}
-        <div className="flex gap-1.5 mb-3" data-testid="phase-indicator">
+        <div className="flex gap-2 mb-4" data-testid="phase-indicator">
           {PHASES.map((phase, i) => (
             <div key={phase.label} className="flex-1">
               <div
-                className={`h-[3px] rounded-full transition-all duration-500 ${
-                  i < currentPhase ? "bg-primary" : i === currentPhase ? "bg-primary" : "bg-border"
+                className={`h-[2px] rounded-full transition-all duration-500 ${
+                  i < currentPhase ? "bg-primary" : i === currentPhase ? "bg-primary" : "bg-gray-200"
                 }`}
               />
-              <span className={`text-[9px] uppercase tracking-[0.7px] mt-1 block truncate ${
-                i === currentPhase ? "text-primary font-semibold" : "text-text-faint"
+              <span className={`text-[9px] uppercase tracking-[0.8px] mt-1.5 block truncate ${
+                i === currentPhase ? "text-primary font-semibold" : "text-gray-400"
               }`}>
                 {phase.label}
               </span>
@@ -779,7 +779,7 @@ export default function Onboarding() {
         </div>
 
         {/* Step progress */}
-        <div className="h-[2px] bg-border rounded-full mb-2" data-testid="step-progress">
+        <div className="h-[2px] bg-gray-100 rounded-full mb-2" data-testid="step-progress">
           <div
             className="h-full bg-primary rounded-full transition-all duration-500"
             style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
@@ -787,7 +787,7 @@ export default function Onboarding() {
         </div>
 
         {/* Step counter with time estimate */}
-        <p className="text-[11px] text-muted-foreground mb-1" data-testid="step-counter">
+        <p className="text-[11px] text-gray-400 mb-1" data-testid="step-counter">
           Step {step} of {TOTAL_STEPS} {step < TOTAL_STEPS ? `· about ${Math.max(1, Math.ceil((TOTAL_STEPS - step) * 0.75))} min left` : "· almost done!"}
         </p>
 
@@ -831,7 +831,7 @@ export default function Onboarding() {
       </div>
 
       {/* Bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-5 py-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-5 py-4">
         <div className="max-w-[560px] mx-auto">
           {/* Step 8: two choices */}
           {step === 8 ? (
@@ -962,7 +962,7 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
   return (
     <div data-testid="screen-1" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Let's get to know you</h2>
-      <p className="text-text-light text-sm mb-8">Basic information to personalize your journey</p>
+      <p className="text-gray-500 text-sm mb-8">Basic information to personalize your journey</p>
 
       <div className="space-y-6">
         <div>
@@ -1002,11 +1002,11 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
 
         <div>
           <label className="vitallity-label">Height</label>
-          <div className="flex bg-card rounded-[10px] border border-border p-0.5 w-fit mb-3">
+          <div className="flex bg-card rounded-[10px] border border-gray-200 p-0.5 w-fit mb-3">
             <button
               type="button"
               className={`px-4 py-1.5 rounded-[8px] text-xs font-semibold transition-all ${
-                data.heightUnit === "cm" ? "bg-primary text-white shadow-sm" : "text-text-light"
+                data.heightUnit === "cm" ? "bg-primary text-white shadow-sm" : "text-gray-500"
               }`}
               onClick={() => setHeightUnit("cm")}
               data-testid="toggle-height-cm"
@@ -1014,7 +1014,7 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
             <button
               type="button"
               className={`px-4 py-1.5 rounded-[8px] text-xs font-semibold transition-all ${
-                data.heightUnit === "ftin" ? "bg-primary text-white shadow-sm" : "text-text-light"
+                data.heightUnit === "ftin" ? "bg-primary text-white shadow-sm" : "text-gray-500"
               }`}
               onClick={() => setHeightUnit("ftin")}
               data-testid="toggle-height-ftin"
@@ -1030,7 +1030,7 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
                 className="vitallity-input w-28"
                 data-testid="input-height-cm"
               />
-              <span className="text-sm text-text-light">cm</span>
+              <span className="text-sm text-gray-500">cm</span>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -1042,7 +1042,7 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
                 className="vitallity-input w-20"
                 data-testid="input-height-ft"
               />
-              <span className="text-sm text-text-light">ft</span>
+              <span className="text-sm text-gray-500">ft</span>
               <input
                 type="number"
                 value={data.heightIn}
@@ -1051,18 +1051,18 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
                 className="vitallity-input w-20"
                 data-testid="input-height-in"
               />
-              <span className="text-sm text-text-light">in</span>
+              <span className="text-sm text-gray-500">in</span>
             </div>
           )}
         </div>
 
         <div>
           <label className="vitallity-label">Current Weight</label>
-          <div className="flex bg-card rounded-[10px] border border-border p-0.5 w-fit mb-3">
+          <div className="flex bg-card rounded-[10px] border border-gray-200 p-0.5 w-fit mb-3">
             <button
               type="button"
               className={`px-4 py-1.5 rounded-[8px] text-xs font-semibold transition-all ${
-                data.weightUnit === "kg" ? "bg-primary text-white shadow-sm" : "text-text-light"
+                data.weightUnit === "kg" ? "bg-primary text-white shadow-sm" : "text-gray-500"
               }`}
               onClick={() => setWeightUnit("kg")}
               data-testid="toggle-weight-kg"
@@ -1070,7 +1070,7 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
             <button
               type="button"
               className={`px-4 py-1.5 rounded-[8px] text-xs font-semibold transition-all ${
-                data.weightUnit === "lbs" ? "bg-primary text-white shadow-sm" : "text-text-light"
+                data.weightUnit === "lbs" ? "bg-primary text-white shadow-sm" : "text-gray-500"
               }`}
               onClick={() => setWeightUnit("lbs")}
               data-testid="toggle-weight-lbs"
@@ -1087,17 +1087,17 @@ function Screen1({ data, update, bmi, bmiCategory, bmiColor }: {
               className="vitallity-input w-28"
               data-testid="input-weight"
             />
-            <span className="text-sm text-text-light">{data.weightUnit}</span>
+            <span className="text-sm text-gray-500">{data.weightUnit}</span>
           </div>
         </div>
 
         {bmi > 0 && data.heightCm > 0 && data.weightKg > 0 && (
-          <div className="bg-card rounded-[14px] border border-border p-4 flex items-center gap-3" data-testid="bmi-display">
+          <div className="bg-card rounded-[14px] border border-gray-200 p-4 flex items-center gap-3" data-testid="bmi-display">
             <div className={`text-2xl font-display font-bold ${bmiColor}`}>
               {bmi.toFixed(1)}
             </div>
             <div>
-              <div className="text-xs uppercase tracking-wider text-text-light">BMI</div>
+              <div className="text-xs uppercase tracking-wider text-gray-500">BMI</div>
               <div className={`text-sm font-medium ${bmiColor}`}>{bmiCategory}</div>
             </div>
           </div>
@@ -1202,7 +1202,7 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
         Health history
         <WhyWeAsk text="Your health conditions help us avoid harmful exercise recommendations and tailor nutrition advice to your specific needs." />
       </h2>
-      <p className="text-text-light text-sm mb-8">Understanding your background helps us plan better</p>
+      <p className="text-gray-500 text-sm mb-8">Understanding your background helps us plan better</p>
 
       <div className="space-y-8">
         {/* Section A: Health Conditions */}
@@ -1221,7 +1221,7 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">{entry.condition}</span>
                 <button type="button" onClick={() => removeCondition(entry.condition)} aria-label={`Remove ${entry.condition}`}>
-                  <X className="w-4 h-4 text-text-light" />
+                  <X className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
               <label className="vitallity-label">How long ago?</label>
@@ -1305,7 +1305,7 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
         <div>
           <label className="vitallity-label">Current Medications</label>
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
               value={data.medSearch}
@@ -1315,19 +1315,19 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
               data-testid="input-med-search"
             />
             {medResults.length > 0 && (
-              <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-card border border-border rounded-[14px] shadow-card overflow-hidden" data-testid="med-search-results">
+              <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-card border border-gray-200 rounded-[14px] shadow-card overflow-hidden" data-testid="med-search-results">
                 {medResults.map(m => (
                   <button
                     key={m.genericName}
                     type="button"
                     onClick={() => addMed(m.genericName + (m.brandNames.length ? ` (${m.brandNames[0]})` : ""))}
-                    className="w-full px-4 py-3 text-left text-sm hover:bg-primary/5 transition-colors border-b border-border last:border-0"
+                    className="w-full px-4 py-3 text-left text-sm hover:bg-primary/5 transition-colors border-b border-gray-200 last:border-0"
                   >
                     <span className="font-medium">{m.genericName}</span>
                     {m.brandNames.length > 0 && (
-                      <span className="text-text-light"> ({m.brandNames.join(", ")})</span>
+                      <span className="text-gray-500"> ({m.brandNames.join(", ")})</span>
                     )}
-                    <span className="text-[10px] text-text-faint uppercase ml-2">{m.category}</span>
+                    <span className="text-[10px] text-gray-400 uppercase ml-2">{m.category}</span>
                   </button>
                 ))}
               </div>
@@ -1365,7 +1365,7 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
 
         {/* Section D: Family Health History */}
         <div>
-          <label className="vitallity-label">Family Health History <span className="normal-case text-text-faint">(optional)</span></label>
+          <label className="vitallity-label">Family Health History <span className="normal-case text-gray-400">(optional)</span></label>
           <ChipGroup
             options={familyHistoryOptions.map(c => ({ label: c }))}
             selected={data.familyConditions}
@@ -1429,7 +1429,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
         Pain areas
         <WhyWeAsk text="Knowing your pain points helps us recommend safe exercises and suggest stretches or therapies specific to your problem areas." />
       </h2>
-      <p className="text-text-light text-sm mb-4">Tap areas where you experience pain or discomfort</p>
+      <p className="text-gray-500 text-sm mb-4">Tap areas where you experience pain or discomfort</p>
 
       {data.autoSuggestedPain.length > 0 && (
         <div className="bg-primary-faded rounded-[14px] p-3 mb-4 flex items-start gap-2" data-testid="pain-auto-suggest-note">
@@ -1444,7 +1444,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
           type="button"
           onClick={() => setBodyView("front")}
           className={`flex-1 py-2 text-xs font-semibold rounded-[100px] transition-all ${
-            bodyView === "front" ? "bg-primary text-white shadow-sm" : "text-text-mid"
+            bodyView === "front" ? "bg-primary text-white shadow-sm" : "text-gray-700"
           }`}
           data-testid="body-view-front"
         >
@@ -1454,7 +1454,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
           type="button"
           onClick={() => setBodyView("back")}
           className={`flex-1 py-2 text-xs font-semibold rounded-[100px] transition-all ${
-            bodyView === "back" ? "bg-primary text-white shadow-sm" : "text-text-mid"
+            bodyView === "back" ? "bg-primary text-white shadow-sm" : "text-gray-700"
           }`}
           data-testid="body-view-back"
         >
@@ -1590,7 +1590,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
         className={`w-full py-3 px-4 rounded-2xl border text-sm font-medium transition-all mb-4 ${
           isSelected("None")
             ? "bg-primary/10 border-primary text-primary"
-            : "border-border text-text-mid hover:bg-muted/50"
+            : "border-gray-200 text-gray-700 hover:bg-muted/50"
         }`}
         data-testid="pain-none"
       >
@@ -1624,7 +1624,7 @@ function Screen4({ data, update }: { data: OnboardingData; update: <K extends ke
         Exercise & activity
         <WhyWeAsk text="Your exercise background helps us set realistic starting points and suggest activities you're likely to enjoy and stick with." />
       </h2>
-      <p className="text-text-light text-sm mb-8">Understanding your movement patterns</p>
+      <p className="text-gray-500 text-sm mb-8">Understanding your movement patterns</p>
 
       <div className="space-y-8">
         <div>
@@ -1703,7 +1703,7 @@ function Screen5({ data, update }: { data: OnboardingData; update: <K extends ke
         Diet & eating
         <WhyWeAsk text="Understanding your dietary preferences and patterns lets us suggest realistic, culturally appropriate meal plans instead of generic advice." />
       </h2>
-      <p className="text-text-light text-sm mb-8">Your food preferences and patterns</p>
+      <p className="text-gray-500 text-sm mb-8">Your food preferences and patterns</p>
 
       <div className="space-y-8">
         {/* Dietary Preferences */}
@@ -1732,45 +1732,45 @@ function Screen5({ data, update }: { data: OnboardingData; update: <K extends ke
 
           {/* Explanation cards */}
           {data.dietaryPrefs.includes("Flexitarian") && (
-            <div className="bg-card rounded-[14px] border border-border p-4 mt-3">
+            <div className="bg-card rounded-[14px] border border-gray-200 p-4 mt-3">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-foreground">Flexitarian</p>
-                  <p className="text-xs text-text-light mt-1">Primarily plant-based but occasionally includes meat, fish, or dairy. Focuses on whole foods, vegetables, and plant proteins while allowing flexibility for social situations or personal preference.</p>
+                  <p className="text-xs text-gray-500 mt-1">Primarily plant-based but occasionally includes meat, fish, or dairy. Focuses on whole foods, vegetables, and plant proteins while allowing flexibility for social situations or personal preference.</p>
                 </div>
               </div>
             </div>
           )}
           {data.dietaryPrefs.includes("Low FODMAP") && (
-            <div className="bg-card rounded-[14px] border border-border p-4 mt-3">
+            <div className="bg-card rounded-[14px] border border-gray-200 p-4 mt-3">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-foreground">Low FODMAP</p>
-                  <p className="text-xs text-text-light mt-1">A diet that limits fermentable carbohydrates that can trigger IBS symptoms. Common high-FODMAP foods to avoid: wheat, onions, garlic, beans, certain fruits. Usually done in phases with a dietitian.</p>
+                  <p className="text-xs text-gray-500 mt-1">A diet that limits fermentable carbohydrates that can trigger IBS symptoms. Common high-FODMAP foods to avoid: wheat, onions, garlic, beans, certain fruits. Usually done in phases with a dietitian.</p>
                 </div>
               </div>
             </div>
           )}
           {data.dietaryPrefs.includes("Sattvic") && (
-            <div className="bg-card rounded-[14px] border border-border p-4 mt-3">
+            <div className="bg-card rounded-[14px] border border-gray-200 p-4 mt-3">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-foreground">Sattvic</p>
-                  <p className="text-xs text-text-light mt-1">A yogic diet emphasizing fresh, seasonal, and minimally processed vegetarian foods. Avoids onion, garlic, caffeine, and alcohol. Focuses on grains, fruits, vegetables, nuts, and dairy for physical and mental clarity.</p>
+                  <p className="text-xs text-gray-500 mt-1">A yogic diet emphasizing fresh, seasonal, and minimally processed vegetarian foods. Avoids onion, garlic, caffeine, and alcohol. Focuses on grains, fruits, vegetables, nuts, and dairy for physical and mental clarity.</p>
                 </div>
               </div>
             </div>
           )}
           {data.dietaryPrefs.includes("Jain") && (
-            <div className="bg-card rounded-[14px] border border-border p-4 mt-3">
+            <div className="bg-card rounded-[14px] border border-gray-200 p-4 mt-3">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-foreground">Jain</p>
-                  <p className="text-xs text-text-light mt-1">Strictly vegetarian, avoids root vegetables (potatoes, onions, garlic, carrots), mushrooms, and foods that may involve harming organisms. Eating before sunset is common practice.</p>
+                  <p className="text-xs text-gray-500 mt-1">Strictly vegetarian, avoids root vegetables (potatoes, onions, garlic, carrots), mushrooms, and foods that may involve harming organisms. Eating before sunset is common practice.</p>
                 </div>
               </div>
             </div>
@@ -1816,7 +1816,7 @@ function Screen5({ data, update }: { data: OnboardingData; update: <K extends ke
         </div>
 
         <div>
-          <label className="vitallity-label">Additional Notes <span className="normal-case text-text-faint">(optional)</span></label>
+          <label className="vitallity-label">Additional Notes <span className="normal-case text-gray-400">(optional)</span></label>
           <textarea
             value={data.eatingNotes}
             onChange={e => update("eatingNotes", e.target.value)}
@@ -1865,7 +1865,7 @@ function Screen6({ data, update }: { data: OnboardingData; update: <K extends ke
   return (
     <div data-testid="screen-6" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Sleep, stress & constraints</h2>
-      <p className="text-text-light text-sm mb-8">Factors that shape your capacity for change</p>
+      <p className="text-gray-500 text-sm mb-8">Factors that shape your capacity for change</p>
 
       <div className="space-y-8">
         {/* Sleep */}
@@ -1947,7 +1947,7 @@ function Screen7({ data, update }: { data: OnboardingData; update: <K extends ke
   return (
     <div data-testid="screen-7" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">What worked vs. what didn't</h2>
-      <p className="text-text-light text-sm mb-8">Now that we know your history, reflect on past attempts</p>
+      <p className="text-gray-500 text-sm mb-8">Now that we know your history, reflect on past attempts</p>
 
       <div className="space-y-6">
         <div>
@@ -2034,7 +2034,7 @@ function Screen8AISummary({
     return (
       <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
         <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
-        <p className="text-text-light text-sm mb-8">Analyzing everything you\'ve shared with us...</p>
+        <p className="text-gray-500 text-sm mb-8">Analyzing everything you\'ve shared with us...</p>
         <div className="space-y-4">
           <div className="vitallity-card flex items-center gap-4 p-6">
             <div className="w-10 h-10 rounded-full animate-shimmer shrink-0" />
@@ -2051,7 +2051,7 @@ function Screen8AISummary({
             </div>
           ))}
           <div className="text-center mt-6">
-            <div className="inline-flex items-center gap-2 text-sm text-text-light">
+            <div className="inline-flex items-center gap-2 text-sm text-gray-500">
               <Brain className="w-4 h-4 text-primary animate-pulse" />
               Analyzing your health profile...
             </div>
@@ -2067,7 +2067,7 @@ function Screen8AISummary({
         <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
         <div className="vitallity-card p-6 mt-8 text-center">
           <AlertTriangle className="w-8 h-8 text-gold mx-auto mb-3" />
-          <p className="text-sm text-text-mid mb-4">{error}</p>
+          <p className="text-sm text-gray-700 mb-4">{error}</p>
           <button
             type="button"
             onClick={() => fetchSummary()}
@@ -2087,7 +2087,7 @@ function Screen8AISummary({
   return (
     <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
-      <p className="text-text-light text-sm mb-6">A snapshot based on everything you\'ve shared</p>
+      <p className="text-gray-500 text-sm mb-6">A snapshot based on everything you\'ve shared</p>
 
       {/* Profile Snapshot - gradient card */}
       <div
@@ -2124,21 +2124,21 @@ function Screen8AISummary({
               >
                 <span className="text-primary">{icon}</span>
                 <span className="flex-1 text-sm font-semibold text-foreground">{label}</span>
-                {isOpen ? <ChevronDown className="w-4 h-4 text-text-light" /> : <ChevronRight className="w-4 h-4 text-text-light" />}
+                {isOpen ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
               </button>
               {isOpen && (
-                <div className="px-4 pb-4 pt-0 border-t border-border/50">
+                <div className="px-4 pb-4 pt-0 border-t border-gray-200/50">
                   {isList ? (
                     <ul className="space-y-2 mt-3">
                       {items.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-text-mid">
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
                           <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
                           {item}
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-text-mid leading-relaxed mt-3">{text}</p>
+                    <p className="text-sm text-gray-700 leading-relaxed mt-3">{text}</p>
                   )}
                 </div>
               )}
@@ -2276,9 +2276,9 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
     <div data-testid="screen-9-goals" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your health goals</h2>
       {healthSummary ? (
-        <p className="text-text-light text-sm mb-6">Based on your profile, here's what we'd recommend focusing on</p>
+        <p className="text-gray-500 text-sm mb-6">Based on your profile, here's what we'd recommend focusing on</p>
       ) : (
-        <p className="text-text-light text-sm mb-6">What matters most to you right now?</p>
+        <p className="text-gray-500 text-sm mb-6">What matters most to you right now?</p>
       )}
 
       <div className="space-y-6">
@@ -2289,7 +2289,7 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
               <Info className="w-5 h-5 text-slate shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-slate">Your BMI suggests you're underweight</p>
-                <p className="text-xs text-text-mid mt-1">Focus on nourishment and strength building.</p>
+                <p className="text-xs text-gray-700 mt-1">Focus on nourishment and strength building.</p>
               </div>
             </div>
           </div>
@@ -2300,7 +2300,7 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
               <Heart className="w-5 h-5 text-accent shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-accent">BMI {bmi.toFixed(1)} - Weight management could help</p>
-                <p className="text-xs text-text-mid mt-1">Based on your BMI, weight management could improve your overall health.</p>
+                <p className="text-xs text-gray-700 mt-1">Based on your BMI, weight management could improve your overall health.</p>
               </div>
             </div>
           </div>
@@ -2311,7 +2311,7 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
               <AlertTriangle className="w-5 h-5 text-rose shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-rose">BMI {bmi.toFixed(1)} - Obesity range</p>
-                <p className="text-xs text-text-mid mt-1">Weight loss should be a priority for your health. We recommend discussing with your doctor.</p>
+                <p className="text-xs text-gray-700 mt-1">Weight loss should be a priority for your health. We recommend discussing with your doctor.</p>
               </div>
             </div>
           </div>
@@ -2322,16 +2322,16 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
               <AlertTriangle className="w-5 h-5 text-rose shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-rose">BMI {bmi.toFixed(1)} - Medical advisory</p>
-                <p className="text-xs text-text-mid mt-1">Your BMI requires medical attention. We strongly recommend consulting your doctor before starting any program.</p>
+                <p className="text-xs text-gray-700 mt-1">Your BMI requires medical attention. We strongly recommend consulting your doctor before starting any program.</p>
                 <label className="flex items-center gap-2 mt-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={data.bmiUnderstand}
                     onChange={e => update("bmiUnderstand", e.target.checked)}
-                    className="rounded border-border"
+                    className="rounded border-gray-200"
                     data-testid="bmi-understand-checkbox"
                   />
-                  <span className="text-xs font-medium text-text-mid">I understand and want to proceed</span>
+                  <span className="text-xs font-medium text-gray-700">I understand and want to proceed</span>
                 </label>
               </div>
             </div>
@@ -2381,19 +2381,19 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
                   className={`w-full text-left rounded-[16px] p-4 border transition-all active:scale-[0.97] ${
                     isSelected
                       ? 'bg-primary/8 border-primary/30'
-                      : 'bg-card border-border hover:border-primary/30'
+                      : 'bg-card border-gray-200 hover:border-primary/30'
                   }`}
                   data-testid={`ai-goal-${i}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                      isSelected ? 'border-primary bg-primary' : 'border-border'
+                      isSelected ? 'border-primary bg-primary' : 'border-gray-200'
                     }`}>
                       {isSelected && <Check className="w-3 h-3 text-white" />}
                     </div>
                     <div>
                       {matchedGoal && <p className="text-sm font-semibold text-foreground mb-0.5">{matchedGoal}</p>}
-                      <p className="text-xs text-text-light leading-relaxed">{suggestion}</p>
+                      <p className="text-xs text-gray-500 leading-relaxed">{suggestion}</p>
                     </div>
                   </div>
                 </button>
@@ -2427,7 +2427,7 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
 
         {/* Custom goal */}
         <div>
-          <label className="vitallity-label">Custom Goal <span className="normal-case text-text-faint">(optional)</span></label>
+          <label className="vitallity-label">Custom Goal <span className="normal-case text-gray-400">(optional)</span></label>
           <textarea
             value={data.customGoal}
             onChange={e => update("customGoal", e.target.value)}
@@ -2499,7 +2499,7 @@ function Screen10({ data, update }: { data: OnboardingData; update: <K extends k
   return (
     <div data-testid="screen-10" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Self-assessment</h2>
-      <p className="text-text-light text-sm mb-6">Honest answers lead to realistic, lasting plans</p>
+      <p className="text-gray-500 text-sm mb-6">Honest answers lead to realistic, lasting plans</p>
 
       <div className="bg-violet-faded rounded-[14px] p-5 mb-8 border border-violet/15" data-testid="calibration-explainer">
         <p className="text-sm text-violet leading-relaxed">
@@ -3011,7 +3011,7 @@ function StepCard({
   return (
     <div className="relative pl-6 pb-5 last:pb-0" data-testid={`milestone-${mIdx}-step-${stepIdx}`}>
       {/* vertical connector line */}
-      <span className="absolute left-[9px] top-5 bottom-0 w-px bg-border last:hidden" aria-hidden />
+      <span className="absolute left-[9px] top-5 bottom-0 w-px bg-gray-200 last:hidden" aria-hidden />
       {/* dot */}
       <span className={`absolute left-0 top-1 w-[18px] h-[18px] rounded-full ${style.dot} flex items-center justify-center`}>
         <Check className="w-2.5 h-2.5 text-white" />
@@ -3022,7 +3022,7 @@ function StepCard({
         <button
           type="button"
           onClick={() => setEditing(e => !e)}
-          className="ml-auto text-text-faint hover:text-primary transition-colors"
+          className="ml-auto text-gray-400 hover:text-primary transition-colors"
           aria-label={editing ? "Save step" : "Edit step"}
         >
           {editing ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
@@ -3051,7 +3051,7 @@ function StepCard({
       ) : (
         <div>
           <p className="text-sm text-foreground leading-snug">{step.description}</p>
-          <p className="text-xs text-text-light mt-1 italic leading-relaxed">{step.why}</p>
+          <p className="text-xs text-gray-500 mt-1 italic leading-relaxed">{step.why}</p>
         </div>
       )}
     </div>
@@ -3126,7 +3126,7 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
   return (
     <div data-testid="screen-11-milestones" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Your glide path</h2>
-      <p className="text-text-light text-sm mb-6">A step-by-step runway to your goals, built around your reality</p>
+      <p className="text-gray-500 text-sm mb-6">A step-by-step runway to your goals, built around your reality</p>
 
       {showCalibrationWarning && (
         <div className="bg-gold-faded rounded-[14px] p-4 mb-5 flex items-start gap-2" data-testid="calibration-milestone-warning">
@@ -3139,7 +3139,7 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
         <div className="bg-primary/8 rounded-[14px] p-6 text-center border border-primary/15" data-testid="no-goals-prompt">
           <Target className="w-6 h-6 text-primary mx-auto mb-2" />
           <p className="text-sm font-semibold text-primary">No goals selected yet</p>
-          <p className="text-xs text-text-light mt-1">Go back to Step 8 and select your goals to generate your glide path</p>
+          <p className="text-xs text-gray-500 mt-1">Go back to Step 8 and select your goals to generate your glide path</p>
         </div>
       )}
 
@@ -3183,13 +3183,13 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground text-sm leading-snug">{m.title}</h3>
-                    <p className="text-xs text-text-light mt-0.5">{m.target}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{m.target}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => removeMilestone(mIdx)}
-                  className="text-text-faint hover:text-rose transition-colors shrink-0 mt-0.5"
+                  className="text-gray-400 hover:text-rose transition-colors shrink-0 mt-0.5"
                   aria-label={`Remove ${m.title}`}
                 >
                   <X className="w-4 h-4" />
@@ -3198,8 +3198,8 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
 
               {/* Timeframe badge */}
               <div className="flex items-center gap-1.5 mb-5">
-                <Clock className="w-3.5 h-3.5 text-text-light" />
-                <span className="text-xs text-text-light font-medium">{m.timeframe}</span>
+                <Clock className="w-3.5 h-3.5 text-gray-500" />
+                <span className="text-xs text-gray-500 font-medium">{m.timeframe}</span>
               </div>
 
               {/* Phase cards with vertical timeline */}
@@ -3222,7 +3222,7 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
                           Phase {pIdx + 1}: {phase.name}
                         </span>
                         {phase.weeks && (
-                          <span className="text-xs text-text-faint ml-auto">{phase.weeks}</span>
+                          <span className="text-xs text-gray-400 ml-auto">{phase.weeks}</span>
                         )}
                       </div>
 
@@ -3255,12 +3255,12 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
       {/* End goal summary */}
       {endGoalLine && (
         <div className="mt-6 flex items-center justify-center gap-2">
-          <div className="h-px flex-1 bg-border" />
+          <div className="h-px flex-1 bg-gray-200" />
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/8 border border-primary/20">
             <Target className="w-3.5 h-3.5 text-primary" />
             <span className="text-xs font-semibold text-primary">{endGoalLine}</span>
           </div>
-          <div className="h-px flex-1 bg-border" />
+          <div className="h-px flex-1 bg-gray-200" />
         </div>
       )}
 
@@ -3269,7 +3269,7 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
         <button
           type="button"
           onClick={regenerate}
-          className="flex-1 border border-border rounded-[12px] p-3 flex items-center justify-center gap-2 text-sm text-text-mid hover:bg-card transition-colors"
+          className="flex-1 border border-gray-200 rounded-[12px] p-3 flex items-center justify-center gap-2 text-sm text-gray-700 hover:bg-card transition-colors"
           data-testid="regenerate-glide-path"
         >
           <Sparkles className="w-4 h-4 text-primary" />
@@ -3301,13 +3301,13 @@ function Screen11Milestones({ data, update }: { data: OnboardingData; update: <K
             { label: "Hit a milestone", pts: "+75 pts" },
           ].map(item => (
             <div key={item.label} className="flex items-center justify-between">
-              <p className="text-xs text-text-mid">{item.label}</p>
+              <p className="text-xs text-gray-700">{item.label}</p>
               <span className="text-xs font-semibold text-[hsl(var(--gold))]">{item.pts}</span>
             </div>
           ))}
         </div>
-        <div className="mt-3 pt-3 border-t border-border">
-          <p className="text-xs text-text-light">Rewards Store coming soon -- redeem points for premium features and wellness products</p>
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <p className="text-xs text-gray-500">Rewards Store coming soon -- redeem points for premium features and wellness products</p>
         </div>
       </div>
     </div>
@@ -3344,7 +3344,7 @@ function Screen12Integrations({ authFetch }: { authFetch: (method: string, url: 
   return (
     <div data-testid="screen-12-integrations" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Power Up Your Journey</h2>
-      <p className="text-text-light text-sm mb-6">Connect your tools for a seamless experience</p>
+      <p className="text-gray-500 text-sm mb-6">Connect your tools for a seamless experience</p>
 
       <div className="space-y-3">
         {/* Telegram */}
@@ -3355,10 +3355,10 @@ function Screen12Integrations({ authFetch }: { authFetch: (method: string, url: 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">Telegram</p>
-              <p className="text-xs text-text-mid mt-0.5">Daily reminders and check-ins without opening the app</p>
+              <p className="text-xs text-gray-700 mt-0.5">Daily reminders and check-ins without opening the app</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-text-light mb-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3 flex-wrap">
             <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">1</span>
             <span>Tap Connect</span>
             <span className="text-border mx-1">-</span>
@@ -3387,10 +3387,10 @@ function Screen12Integrations({ authFetch }: { authFetch: (method: string, url: 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">Google Sheets</p>
-              <p className="text-xs text-text-mid mt-0.5">Auto-export your logs to a spreadsheet</p>
+              <p className="text-xs text-gray-700 mt-0.5">Auto-export your logs to a spreadsheet</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-text-light mb-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3 flex-wrap">
             <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">1</span>
             <span>Tap Connect</span>
             <span className="text-border mx-1">-</span>
@@ -3413,36 +3413,36 @@ function Screen12Integrations({ authFetch }: { authFetch: (method: string, url: 
 
         {/* Coming Soon divider */}
         <div className="relative flex items-center gap-3 py-1">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-[11px] font-semibold text-text-light uppercase tracking-wider">Coming Soon</span>
-          <div className="flex-1 h-px bg-border" />
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Coming Soon</span>
+          <div className="flex-1 h-px bg-gray-200" />
         </div>
 
         {/* Coming Soon items */}
         <div className="space-y-2 opacity-60">
           <div className="vitallity-card p-4 flex items-center gap-3">
-            <MessageCircle className="w-5 h-5 text-text-light shrink-0" />
+            <MessageCircle className="w-5 h-5 text-gray-500 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">WhatsApp</p>
-              <p className="text-xs text-text-mid">Message-based check-ins</p>
+              <p className="text-xs text-gray-700">Message-based check-ins</p>
             </div>
-            <span className="text-[10px] font-semibold bg-muted text-text-light rounded-full px-2 py-0.5">Soon</span>
+            <span className="text-[10px] font-semibold bg-muted text-gray-500 rounded-full px-2 py-0.5">Soon</span>
           </div>
           <div className="vitallity-card p-4 flex items-center gap-3">
-            <Utensils className="w-5 h-5 text-text-light shrink-0" />
+            <Utensils className="w-5 h-5 text-gray-500 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">MyFitnessPal</p>
-              <p className="text-xs text-text-mid">Sync nutrition data</p>
+              <p className="text-xs text-gray-700">Sync nutrition data</p>
             </div>
-            <span className="text-[10px] font-semibold bg-muted text-text-light rounded-full px-2 py-0.5">Soon</span>
+            <span className="text-[10px] font-semibold bg-muted text-gray-500 rounded-full px-2 py-0.5">Soon</span>
           </div>
           <div className="vitallity-card p-4 flex items-center gap-3">
-            <Activity className="w-5 h-5 text-text-light shrink-0" />
+            <Activity className="w-5 h-5 text-gray-500 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">Health Trackers</p>
-              <p className="text-xs text-text-mid">Apple Health, Fitbit, Garmin</p>
+              <p className="text-xs text-gray-700">Apple Health, Fitbit, Garmin</p>
             </div>
-            <span className="text-[10px] font-semibond bg-muted text-text-light rounded-full px-2 py-0.5">Soon</span>
+            <span className="text-[10px] font-semibond bg-muted text-gray-500 rounded-full px-2 py-0.5">Soon</span>
           </div>
         </div>
       </div>
@@ -3470,7 +3470,7 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
   return (
     <div data-testid="screen-12-review" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">Your journey map</h2>
-      <p className="text-text-light text-sm mb-8">Review your information before we begin</p>
+      <p className="text-gray-500 text-sm mb-8">Review your information before we begin</p>
 
       <div className="space-y-5">
         {/* Profile card */}
@@ -3478,25 +3478,25 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
           <h3 className="vitallity-label">Profile</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-text-light">Name</span>
+              <span className="text-gray-500">Name</span>
               <span className="font-medium">{data.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-light">Age</span>
+              <span className="text-gray-500">Age</span>
               <span className="font-medium">{data.age}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-light">Height</span>
+              <span className="text-gray-500">Height</span>
               <span className="font-medium">{data.heightCm} cm</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-light">Weight</span>
+              <span className="text-gray-500">Weight</span>
               <span className="font-medium">{data.weightKg} kg</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-light">BMI</span>
+              <span className="text-gray-500">BMI</span>
               <span className="font-medium">
-                {bmi.toFixed(1)} <span className="text-text-light">({bmiCategory})</span>
+                {bmi.toFixed(1)} <span className="text-gray-500">({bmiCategory})</span>
               </span>
             </div>
           </div>
@@ -3512,7 +3512,7 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
                   {data.healthConditions.filter(c => c.condition !== "None currently").map(c => (
                     <div key={c.condition} className="flex items-center gap-2">
                       <span className="bg-primary/8 text-primary text-xs rounded-full px-2.5 py-1">{c.condition}</span>
-                      {c.duration && <span className="text-[10px] text-text-light">{c.duration}</span>}
+                      {c.duration && <span className="text-[10px] text-gray-500">{c.duration}</span>}
                     </div>
                   ))}
                 </div>
@@ -3520,7 +3520,7 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
             )}
             {data.familyConditions.length > 0 && !data.familyConditions.includes("None known") && (
               <div className="mb-3">
-                <div className="text-xs text-text-light mb-1">Family History</div>
+                <div className="text-xs text-gray-500 mb-1">Family History</div>
                 <div className="flex flex-wrap gap-1.5">
                   {data.familyConditions.map(c => (
                     <span key={c} className="bg-accent/8 text-accent text-xs rounded-full px-2.5 py-1">{c}</span>
@@ -3533,7 +3533,7 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
             )}
             {data.painAreas.length > 0 && !data.painAreas.includes("None") && (
               <div className="mb-3">
-                <div className="text-xs text-text-light mb-1">Pain Areas</div>
+                <div className="text-xs text-gray-500 mb-1">Pain Areas</div>
                 <div className="flex flex-wrap gap-1.5">
                   {data.painAreas.map(p => (
                     <span key={p} className="bg-rose/8 text-rose text-xs rounded-full px-2.5 py-1">{p}</span>
@@ -3543,7 +3543,7 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
             )}
             {data.medications.length > 0 && (
               <div>
-                <div className="text-xs text-text-light mb-1">Medications</div>
+                <div className="text-xs text-gray-500 mb-1">Medications</div>
                 <div className="flex flex-wrap gap-1.5">
                   {data.medications.map(m => (
                     <span key={m} className="bg-slate/8 text-slate text-xs rounded-full px-2.5 py-1">{m}</span>
@@ -3560,38 +3560,38 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
           <div className="space-y-2 text-sm">
             {data.occupationActivity && (
               <div className="flex justify-between">
-                <span className="text-text-light">Occupation</span>
+                <span className="text-gray-500">Occupation</span>
                 <span className="font-medium">{data.occupationActivity}</span>
               </div>
             )}
             {data.exerciseHistoryOption && (
               <div className="flex justify-between">
-                <span className="text-text-light">Exercise History</span>
+                <span className="text-gray-500">Exercise History</span>
                 <span className="font-medium text-right max-w-[200px]">{data.exerciseHistoryOption}</span>
               </div>
             )}
             {data.exerciseComfort && (
               <div className="flex justify-between">
-                <span className="text-text-light">Exercise Comfort</span>
+                <span className="text-gray-500">Exercise Comfort</span>
                 <span className="font-medium text-right max-w-[200px]">{data.exerciseComfort}</span>
               </div>
             )}
             {data.sleepHours && (
               <div className="flex justify-between">
-                <span className="text-text-light">Sleep</span>
+                <span className="text-gray-500">Sleep</span>
                 <span className="font-medium">{data.sleepHours} ({data.sleepQuality || "N/A"})</span>
               </div>
             )}
             {data.stressLevel && (
               <div className="flex justify-between">
-                <span className="text-text-light">Stress</span>
+                <span className="text-gray-500">Stress</span>
                 <span className="font-medium">{data.stressLevel}</span>
               </div>
             )}
           </div>
           {data.constraintChoices.length > 0 && (
             <div className="mt-3">
-              <div className="text-xs text-text-light mb-1">Constraints</div>
+              <div className="text-xs text-gray-500 mb-1">Constraints</div>
               <div className="flex flex-wrap gap-1.5">
                 {data.constraintChoices.map(c => (
                   <span key={c} className="bg-slate/8 text-slate text-xs rounded-full px-2.5 py-1">{c}</span>
@@ -3610,10 +3610,10 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
             ))}
           </div>
           {data.customGoal && (
-            <p className="text-sm text-text-mid italic">"{data.customGoal}"</p>
+            <p className="text-sm text-gray-700 italic">"{data.customGoal}"</p>
           )}
           {data.goals.includes("Lose Weight") && data.targetWeightKg && (
-            <div className="text-sm text-text-mid mt-2">
+            <div className="text-sm text-gray-700 mt-2">
               Target: {data.targetWeightKg}kg
               {data.weightTimeline && ` in ${data.weightTimeline}`}
             </div>
@@ -3634,7 +3634,7 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
                 <div className={`text-2xl font-display font-bold ${scoreColor(item.value)}`}>
                   {item.value}
                 </div>
-                <div className="text-xs text-text-light mt-0.5">{item.label}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{item.label}</div>
                 <div className={`text-[10px] font-medium ${scoreColor(item.value)}`}>{scoreLabel(item.value)}</div>
               </div>
             ))}
@@ -3653,7 +3653,7 @@ function Screen13Review({ data, bmi, bmiCategory }: { data: OnboardingData; bmi:
                   </div>
                   <div>
                     <span className="font-medium">{m.title}</span>
-                    {m.timeframe && <span className="text-text-light ml-2">({m.timeframe})</span>}
+                    {m.timeframe && <span className="text-gray-500 ml-2">({m.timeframe})</span>}
                   </div>
                 </div>
               ))}

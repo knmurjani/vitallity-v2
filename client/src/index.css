@@ -138,38 +138,38 @@
 
 @layer components {
   .vitallity-input {
-    @apply w-full rounded-[16px] border-[1.5px] border-border bg-background px-4 py-[14px] text-sm outline-none transition-colors;
+    @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm outline-none transition-all;
     font-family: var(--font-sans);
   }
   .vitallity-input:focus {
-    @apply border-primary;
+    @apply border-primary ring-2 ring-primary/10;
   }
   .vitallity-input::placeholder {
-    @apply text-muted-foreground;
+    @apply text-gray-400;
   }
 
   .vitallity-label {
-    @apply text-[11px] uppercase tracking-[0.9px] text-muted-foreground font-medium mb-2 block;
+    @apply text-[11px] uppercase tracking-[1px] text-gray-500 font-semibold mb-2 block;
   }
 
   .vitallity-card {
-    @apply bg-card rounded-[20px] border border-border p-5;
-    box-shadow: var(--shadow-card);
+    @apply bg-white rounded-2xl border border-gray-100 p-5;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
   }
 
   .vitallity-btn-primary {
-    @apply bg-primary text-primary-foreground rounded-[100px] px-7 py-[14px] font-semibold text-sm tracking-[0.3px] transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-primary text-white rounded-full px-7 py-3.5 font-semibold text-sm tracking-wide transition-all hover:shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .vitallity-btn-primary:active {
     transform: scale(0.97);
   }
 
   .vitallity-btn-secondary {
-    @apply bg-transparent text-primary border-[1.5px] border-primary rounded-[100px] px-7 py-[14px] font-semibold text-sm tracking-[0.3px] transition-all hover:bg-primary/5;
+    @apply bg-transparent text-primary border-[1.5px] border-primary rounded-full px-7 py-3.5 font-semibold text-sm tracking-wide transition-all hover:bg-primary/5;
   }
 
   .vitallity-btn-ghost {
-    @apply bg-transparent text-muted-foreground border-[1.5px] border-border rounded-[100px] px-7 py-[14px] font-semibold text-sm tracking-[0.3px] transition-all hover:bg-muted/50;
+    @apply bg-transparent text-gray-500 border border-gray-200 rounded-full px-7 py-3.5 font-semibold text-sm tracking-wide transition-all hover:bg-gray-50;
   }
 
   /* Glass morphism */

@@ -20,8 +20,8 @@ export function Chip({ label, description, selected, onToggle, disabled, testId 
         inline-flex items-center gap-2 rounded-[100px] border-[1.5px] px-4 py-2.5
         text-sm font-medium transition-all cursor-pointer select-none active:scale-[0.97]
         ${selected
-          ? "border-primary bg-primary/8 text-primary"
-          : "border-border bg-card text-text-mid hover:border-primary/40"
+          ? "border-primary bg-primary/8 text-primary shadow-sm shadow-primary/10"
+          : "border-gray-200 bg-white text-gray-700 hover:border-primary/40 hover:bg-gray-50"
         }
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}
         ${description ? "flex-col items-start rounded-[14px] px-4 py-3" : ""}
