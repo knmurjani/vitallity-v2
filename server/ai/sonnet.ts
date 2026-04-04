@@ -2,7 +2,7 @@ import { getClient } from "./client";
 
 export async function callSonnet(systemPrompt: string, messages: { role: string; content: string }[]): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), 60000);
   try {
     const response = await getClient().messages.create({
       model: "claude-sonnet-4-6",

@@ -816,8 +816,8 @@ export default function Onboarding() {
 
         {/* Screen content */}
         {step === 1 && <Screen1 data={data} update={update} bmi={bmi} bmiCategory={bmiCategory} bmiColor={bmiColor} />}
-        {step === 2 && <Screen2 data={data} update={update} />}
-        {step === 3 && <Screen3 data={data} update={update} />}
+        {step === 2 && <Screen3 data={data} update={update} />}
+        {step === 3 && <Screen2 data={data} update={update} />}
         {step === 4 && <Screen4 data={data} update={update} />}
         {step === 5 && <Screen5 data={data} update={update} />}
         {step === 6 && <Screen6 data={data} update={update} />}
@@ -1276,31 +1276,6 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
           })()}
         </div>
 
-        {/* Section B: Acute Issues */}
-        <div>
-          <label className="vitallity-label">Current / Acute Issues</label>
-          <ChipGroup
-            options={acuteOptions.map(c => ({ label: c }))}
-            selected={data.acuteConditions}
-            onChange={vals => update("acuteConditions", vals)}
-            multiple
-          />
-          <div className="mt-3 flex gap-2">
-            <input
-              type="text"
-              value={data.customAcute}
-              onChange={e => update("customAcute", e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addCustomAcute()}
-              placeholder="Type custom condition..."
-              className="vitallity-input flex-1"
-              data-testid="input-custom-acute"
-            />
-            <button type="button" onClick={addCustomAcute} className="vitallity-btn-ghost px-4">
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
         {/* Section C: Medications */}
         <div>
           <label className="vitallity-label">Current Medications</label>
@@ -1465,103 +1440,348 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
       {/* SVG Body Diagrams */}
       <div className="flex justify-center mb-4">
         {bodyView === "front" ? (
-          <svg viewBox="0 0 220 380" className="w-[240px] h-[350px]" aria-label="Human body front view pain map">
+          <svg viewBox="0 0 260 420" className="w-[220px] h-[370px]" aria-label="Human body front view pain map">
+            {/* ── FRONT VIEW ── */}
+
             {/* Head */}
-            <ellipse cx="110" cy="28" rx="20" ry="22" className={`${regionFill("Head")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Head")} data-testid="svg-head" />
+            <path d="M130,12 C118,12 108,20 107,31 C106,42 112,52 120,55 C124,57 126,60 126,64 L134,64 C134,60 136,57 140,55 C148,52 154,42 153,31 C152,20 142,12 130,12 Z"
+              className={`${regionFill("Head")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Head")} data-testid="svg-head"
+            />
+            {isSelected("Head") && <text x="145" y="22" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">Head</text>}
+
             {/* Neck */}
-            <rect x="101" y="51" width="18" height="14" rx="5" className={`${regionFill("Neck")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Neck")} data-testid="svg-neck" />
-            {/* Left Shoulder */}
-            <ellipse cx="68" cy="78" rx="18" ry="11" className={`${regionFill("Left Shoulder")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Shoulder")} data-testid="svg-left-shoulder" />
+            <path d="M122,64 L122,78 C122,81 125,83 130,83 C135,83 138,81 138,78 L138,64 Z"
+              className={`${regionFill("Neck")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Neck")} data-testid="svg-neck"
+            />
+            {isSelected("Neck") && <text x="142" y="74" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">Neck</text>}
+
+            {/* Left Shoulder (body-left = screen-right of center) */}
+            <path d="M138,78 C138,78 148,76 156,72 C162,69 167,73 167,79 C167,85 162,90 155,92 C148,94 140,92 138,90 Z"
+              className={`${regionFill("Left Shoulder")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Shoulder")} data-testid="svg-left-shoulder"
+            />
+            {isSelected("Left Shoulder") && <text x="158" y="70" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Shoulder</text>}
+
             {/* Right Shoulder */}
-            <ellipse cx="152" cy="78" rx="18" ry="11" className={`${regionFill("Right Shoulder")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Shoulder")} data-testid="svg-right-shoulder" />
+            <path d="M122,78 C122,78 112,76 104,72 C98,69 93,73 93,79 C93,85 98,90 105,92 C112,94 120,92 122,90 Z"
+              className={`${regionFill("Right Shoulder")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Shoulder")} data-testid="svg-right-shoulder"
+            />
+            {isSelected("Right Shoulder") && <text x="64" y="70" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">R Shoulder</text>}
+
             {/* Chest */}
-            <rect x="82" y="68" width="56" height="38" rx="8" className={`${regionFill("Chest")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Chest")} data-testid="svg-chest" />
-            {/* Left Upper Arm */}
-            <rect x="44" y="86" width="16" height="36" rx="6" className={`${regionFill("Left Upper Arm")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Upper Arm")} data-testid="svg-left-upper-arm" />
-            {/* Right Upper Arm */}
-            <rect x="160" y="86" width="16" height="36" rx="6" className={`${regionFill("Right Upper Arm")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Upper Arm")} data-testid="svg-right-upper-arm" />
-            {/* Left Elbow */}
-            <ellipse cx="52" cy="130" rx="10" ry="8" className={`${regionFill("Left Elbow")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Elbow")} data-testid="svg-left-elbow" />
-            {/* Right Elbow */}
-            <ellipse cx="168" cy="130" rx="10" ry="8" className={`${regionFill("Right Elbow")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Elbow")} data-testid="svg-right-elbow" />
-            {/* Left Forearm */}
-            <rect x="40" y="140" width="14" height="30" rx="5" className={`${regionFill("Left Forearm")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Forearm")} data-testid="svg-left-forearm" />
-            {/* Right Forearm */}
-            <rect x="166" y="140" width="14" height="30" rx="5" className={`${regionFill("Right Forearm")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Forearm")} data-testid="svg-right-forearm" />
-            {/* Left Wrist */}
-            <rect x="36" y="172" width="14" height="12" rx="4" className={`${regionFill("Left Wrist")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Wrist")} data-testid="svg-left-wrist" />
-            {/* Right Wrist */}
-            <rect x="170" y="172" width="14" height="12" rx="4" className={`${regionFill("Right Wrist")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Wrist")} data-testid="svg-right-wrist" />
-            {/* Left Hand */}
-            <ellipse cx="40" cy="194" rx="8" ry="10" className={`${regionFill("Left Hand")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Hand")} data-testid="svg-left-hand" />
-            {/* Right Hand */}
-            <ellipse cx="180" cy="194" rx="8" ry="10" className={`${regionFill("Right Hand")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Hand")} data-testid="svg-right-hand" />
+            <path d="M122,84 C120,84 105,88 103,96 C101,104 102,114 104,120 C106,126 110,128 122,128 L138,128 C150,128 154,126 156,120 C158,114 159,104 157,96 C155,88 140,84 138,84 Z"
+              className={`${regionFill("Chest")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Chest")} data-testid="svg-chest"
+            />
+            {isSelected("Chest") && <text x="121" y="110" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Chest</text>}
+
             {/* Abdomen */}
-            <rect x="82" y="108" width="56" height="44" rx="8" className={`${regionFill("Abdomen")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Abdomen")} data-testid="svg-abdomen" />
+            <path d="M104,120 C103,126 102,136 103,146 C104,156 106,162 110,165 C114,168 120,170 130,170 C140,170 146,168 150,165 C154,162 156,156 157,146 C158,136 157,126 156,120 C150,123 140,125 130,125 C120,125 110,123 104,120 Z"
+              className={`${regionFill("Abdomen")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Abdomen")} data-testid="svg-abdomen"
+            />
+            {isSelected("Abdomen") && <text x="130" y="148" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Abdomen</text>}
+
+            {/* Left Upper Arm */}
+            <path d="M155,92 C157,95 162,100 166,108 C169,115 169,124 167,130 C165,134 162,136 160,136 C157,136 154,134 153,130 C151,124 150,115 150,108 C149,100 150,93 155,92 Z"
+              className={`${regionFill("Left Upper Arm")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Upper Arm")} data-testid="svg-left-upper-arm"
+            />
+            {isSelected("Left Upper Arm") && <text x="172" y="112" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Arm</text>}
+
+            {/* Right Upper Arm */}
+            <path d="M105,92 C103,95 98,100 94,108 C91,115 91,124 93,130 C95,134 98,136 100,136 C103,136 106,134 107,130 C109,124 110,115 110,108 C111,100 110,93 105,92 Z"
+              className={`${regionFill("Right Upper Arm")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Upper Arm")} data-testid="svg-right-upper-arm"
+            />
+            {isSelected("Right Upper Arm") && <text x="72" y="112" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">R Arm</text>}
+
+            {/* Left Elbow */}
+            <ellipse cx="162" cy="137" rx="8" ry="7"
+              className={`${regionFill("Left Elbow")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Elbow")} data-testid="svg-left-elbow"
+            />
+            {isSelected("Left Elbow") && <text x="172" y="140" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Elbow</text>}
+
+            {/* Right Elbow */}
+            <ellipse cx="98" cy="137" rx="8" ry="7"
+              className={`${regionFill("Right Elbow")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Elbow")} data-testid="svg-right-elbow"
+            />
+            {isSelected("Right Elbow") && <text x="62" y="140" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">R Elbow</text>}
+
+            {/* Left Forearm */}
+            <path d="M154,144 C152,150 151,158 151,166 C151,173 153,178 157,180 C161,182 165,180 167,176 C169,172 169,164 168,156 C167,148 164,143 162,143 C160,143 156,143 154,144 Z"
+              className={`${regionFill("Left Forearm")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Forearm")} data-testid="svg-left-forearm"
+            />
+            {isSelected("Left Forearm") && <text x="172" y="162" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Forearm</text>}
+
+            {/* Right Forearm */}
+            <path d="M106,144 C108,150 109,158 109,166 C109,173 107,178 103,180 C99,182 95,180 93,176 C91,172 91,164 92,156 C93,148 96,143 98,143 C100,143 104,143 106,144 Z"
+              className={`${regionFill("Right Forearm")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Forearm")} data-testid="svg-right-forearm"
+            />
+            {isSelected("Right Forearm") && <text x="60" y="162" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Forearm</text>}
+
+            {/* Left Wrist */}
+            <path d="M151,180 C150,183 150,187 151,190 C152,193 155,195 158,195 C161,195 164,193 165,190 C166,187 166,183 165,180 C163,182 160,183 157,183 C154,183 152,182 151,180 Z"
+              className={`${regionFill("Left Wrist")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Wrist")} data-testid="svg-left-wrist"
+            />
+            {isSelected("Left Wrist") && <text x="170" y="188" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Wrist</text>}
+
+            {/* Right Wrist */}
+            <path d="M109,180 C110,183 110,187 109,190 C108,193 105,195 102,195 C99,195 96,193 95,190 C94,187 94,183 95,180 C97,182 100,183 103,183 C106,183 108,182 109,180 Z"
+              className={`${regionFill("Right Wrist")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Wrist")} data-testid="svg-right-wrist"
+            />
+            {isSelected("Right Wrist") && <text x="60" y="188" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Wrist</text>}
+
+            {/* Left Hand */}
+            <path d="M151,190 C149,194 148,200 149,206 C150,211 153,215 158,215 C163,215 166,211 167,206 C168,200 167,194 165,190 C163,193 160,195 157,195 C154,195 152,193 151,190 Z"
+              className={`${regionFill("Left Hand")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Hand")} data-testid="svg-left-hand"
+            />
+            {isSelected("Left Hand") && <text x="170" y="206" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Hand</text>}
+
+            {/* Right Hand */}
+            <path d="M109,190 C111,194 112,200 111,206 C110,211 107,215 102,215 C97,215 94,211 93,206 C92,200 93,194 95,190 C97,193 100,195 103,195 C106,195 108,193 109,190 Z"
+              className={`${regionFill("Right Hand")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Hand")} data-testid="svg-right-hand"
+            />
+            {isSelected("Right Hand") && <text x="60" y="206" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Hand</text>}
+
             {/* Left Hip */}
-            <ellipse cx="88" cy="168" rx="16" ry="14" className={`${regionFill("Left Hip")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Hip")} data-testid="svg-left-hip" />
+            <path d="M130,170 C137,170 144,171 148,174 C152,177 154,182 154,188 C154,194 151,198 146,200 C141,202 136,202 131,202 L130,202 L130,170 Z"
+              className={`${regionFill("Left Hip")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Hip")} data-testid="svg-left-hip"
+            />
+            {isSelected("Left Hip") && <text x="156" y="186" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Hip</text>}
+
             {/* Right Hip */}
-            <ellipse cx="132" cy="168" rx="16" ry="14" className={`${regionFill("Right Hip")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Hip")} data-testid="svg-right-hip" />
+            <path d="M130,170 C123,170 116,171 112,174 C108,177 106,182 106,188 C106,194 109,198 114,200 C119,202 124,202 129,202 L130,202 L130,170 Z"
+              className={`${regionFill("Right Hip")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Hip")} data-testid="svg-right-hip"
+            />
+            {isSelected("Right Hip") && <text x="74" y="186" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Hip</text>}
+
             {/* Left Thigh */}
-            <rect x="78" y="184" width="20" height="54" rx="7" className={`${regionFill("Left Thigh")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Thigh")} data-testid="svg-left-thigh" />
+            <path d="M131,202 C136,202 141,202 146,200 C148,199 150,197 150,202 C152,212 154,228 153,242 C152,252 148,258 143,260 C138,262 133,261 131,260 L131,202 Z"
+              className={`${regionFill("Left Thigh")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Thigh")} data-testid="svg-left-thigh"
+            />
+            {isSelected("Left Thigh") && <text x="158" y="232" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Thigh</text>}
+
             {/* Right Thigh */}
-            <rect x="122" y="184" width="20" height="54" rx="7" className={`${regionFill("Right Thigh")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Thigh")} data-testid="svg-right-thigh" />
+            <path d="M129,202 C124,202 119,202 114,200 C112,199 110,197 110,202 C108,212 106,228 107,242 C108,252 112,258 117,260 C122,262 127,261 129,260 L129,202 Z"
+              className={`${regionFill("Right Thigh")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Thigh")} data-testid="svg-right-thigh"
+            />
+            {isSelected("Right Thigh") && <text x="72" y="232" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Thigh</text>}
+
             {/* Left Knee */}
-            <ellipse cx="88" cy="248" rx="13" ry="14" className={`${regionFill("Left Knee")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Knee")} data-testid="svg-left-knee" />
+            <ellipse cx="142" cy="268" rx="12" ry="11"
+              className={`${regionFill("Left Knee")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Knee")} data-testid="svg-left-knee"
+            />
+            {isSelected("Left Knee") && <text x="157" y="271" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Knee</text>}
+
             {/* Right Knee */}
-            <ellipse cx="132" cy="248" rx="13" ry="14" className={`${regionFill("Right Knee")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Knee")} data-testid="svg-right-knee" />
+            <ellipse cx="118" cy="268" rx="12" ry="11"
+              className={`${regionFill("Right Knee")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Knee")} data-testid="svg-right-knee"
+            />
+            {isSelected("Right Knee") && <text x="73" y="271" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Knee</text>}
+
             {/* Left Shin/Calf */}
-            <rect x="80" y="264" width="16" height="48" rx="6" className={`${regionFill("Left Shin/Calf")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Shin/Calf")} data-testid="svg-left-shin" />
+            <path d="M134,279 C136,285 140,295 141,308 C142,320 140,330 137,336 C135,340 132,342 130,342 L131,279 C132,279 133,279 134,279 Z"
+              className={`${regionFill("Left Shin/Calf")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Shin/Calf")} data-testid="svg-left-shin"
+            />
+            {isSelected("Left Shin/Calf") && <text x="146" y="308" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Shin</text>}
+
             {/* Right Shin/Calf */}
-            <rect x="124" y="264" width="16" height="48" rx="6" className={`${regionFill("Right Shin/Calf")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Shin/Calf")} data-testid="svg-right-shin" />
+            <path d="M126,279 C124,285 120,295 119,308 C118,320 120,330 123,336 C125,340 128,342 130,342 L129,279 C128,279 127,279 126,279 Z"
+              className={`${regionFill("Right Shin/Calf")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Shin/Calf")} data-testid="svg-right-shin"
+            />
+            {isSelected("Right Shin/Calf") && <text x="74" y="308" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Shin</text>}
+
             {/* Left Ankle */}
-            <ellipse cx="88" cy="320" rx="10" ry="8" className={`${regionFill("Left Ankle")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Ankle")} data-testid="svg-left-ankle" />
+            <ellipse cx="136" cy="344" rx="9" ry="7"
+              className={`${regionFill("Left Ankle")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Ankle")} data-testid="svg-left-ankle"
+            />
+            {isSelected("Left Ankle") && <text x="148" y="347" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Ankle</text>}
+
             {/* Right Ankle */}
-            <ellipse cx="132" cy="320" rx="10" ry="8" className={`${regionFill("Right Ankle")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Ankle")} data-testid="svg-right-ankle" />
+            <ellipse cx="124" cy="344" rx="9" ry="7"
+              className={`${regionFill("Right Ankle")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Ankle")} data-testid="svg-right-ankle"
+            />
+            {isSelected("Right Ankle") && <text x="72" y="347" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Ankle</text>}
+
             {/* Left Foot */}
-            <ellipse cx="88" cy="340" rx="12" ry="10" className={`${regionFill("Left Foot")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Foot")} data-testid="svg-left-foot" />
+            <path d="M128,351 C131,351 136,352 140,354 C144,356 146,360 145,364 C144,368 140,370 136,370 C132,370 128,368 126,364 C124,360 124,355 126,352 C127,351 127,351 128,351 Z"
+              className={`${regionFill("Left Foot")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Foot")} data-testid="svg-left-foot"
+            />
+            {isSelected("Left Foot") && <text x="148" y="364" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Foot</text>}
+
             {/* Right Foot */}
-            <ellipse cx="132" cy="340" rx="12" ry="10" className={`${regionFill("Right Foot")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Foot")} data-testid="svg-right-foot" />
+            <path d="M132,351 C129,351 124,352 120,354 C116,356 114,360 115,364 C116,368 120,370 124,370 C128,370 132,368 134,364 C136,360 136,355 134,352 C133,351 133,351 132,351 Z"
+              className={`${regionFill("Right Foot")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Foot")} data-testid="svg-right-foot"
+            />
+            {isSelected("Right Foot") && <text x="72" y="364" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Foot</text>}
           </svg>
         ) : (
-          <svg viewBox="0 0 220 380" className="w-[240px] h-[350px]" aria-label="Human body back view pain map">
+          <svg viewBox="0 0 260 420" className="w-[220px] h-[370px]" aria-label="Human body back view pain map">
+            {/* ── BACK VIEW ── */}
+
             {/* Head (rear) */}
-            <ellipse cx="110" cy="28" rx="20" ry="22" className={`${regionFill("Head")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Head")} data-testid="svg-head-back" />
+            <path d="M130,12 C118,12 108,20 107,31 C106,42 112,52 120,55 C124,57 126,60 126,64 L134,64 C134,60 136,57 140,55 C148,52 154,42 153,31 C152,20 142,12 130,12 Z"
+              className={`${regionFill("Head")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Head")} data-testid="svg-head-back"
+            />
+            {isSelected("Head") && <text x="145" y="22" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">Head</text>}
+
             {/* Neck (rear) */}
-            <rect x="101" y="51" width="18" height="14" rx="5" className={`${regionFill("Neck (rear)")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Neck (rear)")} data-testid="svg-neck-rear" />
+            <path d="M122,64 L122,78 C122,81 125,83 130,83 C135,83 138,81 138,78 L138,64 Z"
+              className={`${regionFill("Neck (rear)")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Neck (rear)")} data-testid="svg-neck-rear"
+            />
+            {isSelected("Neck (rear)") && <text x="142" y="74" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">Neck</text>}
+
             {/* Left Rear Shoulder */}
-            <ellipse cx="68" cy="78" rx="18" ry="11" className={`${regionFill("Left Rear Shoulder")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Rear Shoulder")} data-testid="svg-left-rear-shoulder" />
+            <path d="M138,78 C138,78 148,76 156,72 C162,69 167,73 167,79 C167,85 162,90 155,92 C148,94 140,92 138,90 Z"
+              className={`${regionFill("Left Rear Shoulder")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Rear Shoulder")} data-testid="svg-left-rear-shoulder"
+            />
+            {isSelected("Left Rear Shoulder") && <text x="158" y="70" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Shoulder</text>}
+
             {/* Right Rear Shoulder */}
-            <ellipse cx="152" cy="78" rx="18" ry="11" className={`${regionFill("Right Rear Shoulder")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Rear Shoulder")} data-testid="svg-right-rear-shoulder" />
+            <path d="M122,78 C122,78 112,76 104,72 C98,69 93,73 93,79 C93,85 98,90 105,92 C112,94 120,92 122,90 Z"
+              className={`${regionFill("Right Rear Shoulder")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Rear Shoulder")} data-testid="svg-right-rear-shoulder"
+            />
+            {isSelected("Right Rear Shoulder") && <text x="64" y="70" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Shoulder</text>}
+
             {/* Upper Back */}
-            <rect x="82" y="68" width="56" height="30" rx="8" className={`${regionFill("Upper Back")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Upper Back")} data-testid="svg-upper-back" />
+            <path d="M122,84 C120,84 106,87 103,94 C101,100 102,110 103,118 L157,118 C158,110 159,100 157,94 C154,87 140,84 138,84 Z"
+              className={`${regionFill("Upper Back")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Upper Back")} data-testid="svg-upper-back"
+            />
+            {isSelected("Upper Back") && <text x="130" y="104" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Upper Back</text>}
+
             {/* Mid Back */}
-            <rect x="82" y="100" width="56" height="26" rx="6" className={`${regionFill("Mid Back")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Mid Back")} data-testid="svg-mid-back" />
+            <path d="M103,118 L157,118 L158,138 C158,140 155,142 152,143 C148,144 140,145 130,145 C120,145 112,144 108,143 C105,142 102,140 102,138 Z"
+              className={`${regionFill("Mid Back")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Mid Back")} data-testid="svg-mid-back"
+            />
+            {isSelected("Mid Back") && <text x="130" y="133" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Mid Back</text>}
+
             {/* Lower Back */}
-            <rect x="82" y="128" width="56" height="28" rx="6" className={`${regionFill("Lower Back")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Lower Back")} data-testid="svg-lower-back" />
-            {/* Left Tricep */}
-            <rect x="44" y="86" width="16" height="44" rx="6" className={`${regionFill("Left Tricep")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Tricep")} data-testid="svg-left-tricep" />
+            <path d="M102,138 C102,140 102,148 103,158 C104,164 107,168 112,170 L148,170 C153,168 156,164 157,158 C158,148 158,140 158,138 L102,138 Z"
+              className={`${regionFill("Lower Back")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Lower Back")} data-testid="svg-lower-back"
+            />
+            {isSelected("Lower Back") && <text x="130" y="157" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Lower Back</text>}
+
+            {/* Left Tricep (back of upper arm) */}
+            <path d="M155,92 C157,95 162,100 166,108 C169,115 169,124 167,130 C165,134 162,136 160,136 C157,136 154,134 153,130 C151,124 150,115 150,108 C149,100 150,93 155,92 Z"
+              className={`${regionFill("Left Tricep")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Tricep")} data-testid="svg-left-tricep"
+            />
+            {isSelected("Left Tricep") && <text x="172" y="112" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Tricep</text>}
+
             {/* Right Tricep */}
-            <rect x="160" y="86" width="16" height="44" rx="6" className={`${regionFill("Right Tricep")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Tricep")} data-testid="svg-right-tricep" />
-            {/* Forearms (cosmetic) */}
-            <rect x="40" y="134" width="14" height="40" rx="5" className="fill-transparent stroke-text-light/20 stroke-[1.5]" />
-            <rect x="166" y="134" width="14" height="40" rx="5" className="fill-transparent stroke-text-light/20 stroke-[1.5]" />
+            <path d="M105,92 C103,95 98,100 94,108 C91,115 91,124 93,130 C95,134 98,136 100,136 C103,136 106,134 107,130 C109,124 110,115 110,108 C111,100 110,93 105,92 Z"
+              className={`${regionFill("Right Tricep")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Tricep")} data-testid="svg-right-tricep"
+            />
+            {isSelected("Right Tricep") && <text x="60" y="112" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Tricep</text>}
+
+            {/* Left Forearm (back view) */}
+            <path d="M154,144 C152,150 151,158 151,166 C151,173 153,178 157,180 C161,182 165,180 167,176 C169,172 169,164 168,156 C167,148 164,143 162,143 C160,143 156,143 154,144 Z"
+              className={`${regionFill("Left Forearm")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Forearm")} data-testid="svg-left-forearm-back"
+            />
+            {isSelected("Left Forearm") && <text x="172" y="162" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Forearm</text>}
+
+            {/* Right Forearm (back view) */}
+            <path d="M106,144 C108,150 109,158 109,166 C109,173 107,178 103,180 C99,182 95,180 93,176 C91,172 91,164 92,156 C93,148 96,143 98,143 C100,143 104,143 106,144 Z"
+              className={`${regionFill("Right Forearm")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Forearm")} data-testid="svg-right-forearm-back"
+            />
+            {isSelected("Right Forearm") && <text x="60" y="162" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Forearm</text>}
+
             {/* Glutes */}
-            <ellipse cx="110" cy="170" rx="30" ry="18" className={`${regionFill("Glutes")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Glutes")} data-testid="svg-glutes" />
+            <path d="M112,170 C108,172 104,176 103,184 C102,192 104,200 108,204 C112,208 118,210 124,210 C127,210 129,210 130,210 C131,210 133,210 136,210 C142,210 148,208 152,204 C156,200 158,192 157,184 C156,176 152,172 148,170 Z"
+              className={`${regionFill("Glutes")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Glutes")} data-testid="svg-glutes"
+            />
+            {isSelected("Glutes") && <text x="130" y="192" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Glutes</text>}
+
             {/* Left Hamstring */}
-            <rect x="78" y="190" width="20" height="54" rx="7" className={`${regionFill("Left Hamstring")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Hamstring")} data-testid="svg-left-hamstring" />
+            <path d="M131,210 C136,210 141,210 146,208 C148,207 150,205 150,210 C152,220 153,236 151,250 C149,260 145,266 140,267 C136,268 132,267 131,265 L131,210 Z"
+              className={`${regionFill("Left Hamstring")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Hamstring")} data-testid="svg-left-hamstring"
+            />
+            {isSelected("Left Hamstring") && <text x="158" y="238" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Hamstring</text>}
+
             {/* Right Hamstring */}
-            <rect x="122" y="190" width="20" height="54" rx="7" className={`${regionFill("Right Hamstring")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Hamstring")} data-testid="svg-right-hamstring" />
-            {/* Knees (cosmetic) */}
-            <ellipse cx="88" cy="252" rx="13" ry="12" className="fill-transparent stroke-text-light/20 stroke-[1.5]" />
-            <ellipse cx="132" cy="252" rx="13" ry="12" className="fill-transparent stroke-text-light/20 stroke-[1.5]" />
+            <path d="M129,210 C124,210 119,210 114,208 C112,207 110,205 110,210 C108,220 107,236 109,250 C111,260 115,266 120,267 C124,268 128,267 129,265 L129,210 Z"
+              className={`${regionFill("Right Hamstring")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Hamstring")} data-testid="svg-right-hamstring"
+            />
+            {isSelected("Right Hamstring") && <text x="72" y="238" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Hamstring</text>}
+
+            {/* Left Knee (back view) */}
+            <ellipse cx="140" cy="274" rx="12" ry="10"
+              className={`${regionFill("Left Knee")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Knee")} data-testid="svg-left-knee-back"
+            />
+            {isSelected("Left Knee") && <text x="156" y="277" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Knee</text>}
+
+            {/* Right Knee (back view) */}
+            <ellipse cx="120" cy="274" rx="12" ry="10"
+              className={`${regionFill("Right Knee")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Knee")} data-testid="svg-right-knee-back"
+            />
+            {isSelected("Right Knee") && <text x="74" y="277" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Knee</text>}
+
             {/* Left Calf (rear) */}
-            <rect x="80" y="266" width="16" height="48" rx="6" className={`${regionFill("Left Calf (rear)")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Left Calf (rear)")} data-testid="svg-left-calf-rear" />
+            <path d="M132,284 C134,290 138,302 138,314 C138,325 136,333 133,337 C131,340 130,341 130,341 L131,284 C131,284 132,284 132,284 Z"
+              className={`${regionFill("Left Calf (rear)")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Calf (rear)")} data-testid="svg-left-calf-rear"
+            />
+            {isSelected("Left Calf (rear)") && <text x="144" y="312" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Calf</text>}
+
             {/* Right Calf (rear) */}
-            <rect x="124" y="266" width="16" height="48" rx="6" className={`${regionFill("Right Calf (rear)")} stroke-[1.5] cursor-pointer transition-colors`} onClick={() => togglePain("Right Calf (rear)")} data-testid="svg-right-calf-rear" />
-            {/* Feet (cosmetic) */}
-            <ellipse cx="88" cy="330" rx="10" ry="12" className="fill-transparent stroke-text-light/20 stroke-[1.5]" />
-            <ellipse cx="132" cy="330" rx="10" ry="12" className="fill-transparent stroke-text-light/20 stroke-[1.5]" />
+            <path d="M128,284 C126,290 122,302 122,314 C122,325 124,333 127,337 C129,340 130,341 130,341 L129,284 C129,284 128,284 128,284 Z"
+              className={`${regionFill("Right Calf (rear)")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Calf (rear)")} data-testid="svg-right-calf-rear"
+            />
+            {isSelected("Right Calf (rear)") && <text x="76" y="312" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Calf</text>}
+
+            {/* Left Foot (back view) */}
+            <path d="M130,341 C133,341 138,342 142,344 C146,346 148,350 147,354 C146,358 142,360 138,360 C134,360 130,358 128,354 C126,350 126,344 128,342 Z"
+              className={`${regionFill("Left Foot")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Left Foot")} data-testid="svg-left-foot-back"
+            />
+            {isSelected("Left Foot") && <text x="150" y="352" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Foot</text>}
+
+            {/* Right Foot (back view) */}
+            <path d="M130,341 C127,341 122,342 118,344 C114,346 112,350 113,354 C114,358 118,360 122,360 C126,360 130,358 132,354 C134,350 134,344 132,342 Z"
+              className={`${regionFill("Right Foot")} stroke-[1.5] cursor-pointer transition-colors`}
+              onClick={() => togglePain("Right Foot")} data-testid="svg-right-foot-back"
+            />
+            {isSelected("Right Foot") && <text x="72" y="352" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Foot</text>}
           </svg>
         )}
       </div>
@@ -2034,7 +2254,8 @@ function Screen8AISummary({
     return (
       <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
         <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
-        <p className="text-gray-500 text-sm mb-8">Analyzing everything you've shared with us...</p>
+        <p className="text-gray-500 text-sm mb-2">Analyzing everything you've shared with us...</p>
+        <p className="text-gray-400 text-xs mb-6">This takes about 20-30 seconds</p>
         <div className="space-y-4">
           <div className="vitallity-card flex items-center gap-4 p-6">
             <div className="w-10 h-10 rounded-full animate-shimmer shrink-0" />
