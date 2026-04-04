@@ -831,7 +831,7 @@ export default function Onboarding() {
       </div>
 
       {/* Bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-5 py-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-5 py-4 z-30">
         <div className="max-w-[560px] mx-auto">
           {/* Step 8: two choices */}
           {step === 8 ? (
@@ -2034,7 +2034,7 @@ function Screen8AISummary({
     return (
       <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
         <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
-        <p className="text-gray-500 text-sm mb-8">Analyzing everything you\'ve shared with us...</p>
+        <p className="text-gray-500 text-sm mb-8">Analyzing everything you've shared with us...</p>
         <div className="space-y-4">
           <div className="vitallity-card flex items-center gap-4 p-6">
             <div className="w-10 h-10 rounded-full animate-shimmer shrink-0" />
@@ -2067,11 +2067,12 @@ function Screen8AISummary({
         <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
         <div className="vitallity-card p-6 mt-8 text-center">
           <AlertTriangle className="w-8 h-8 text-gold mx-auto mb-3" />
-          <p className="text-sm text-gray-700 mb-4">{error}</p>
+          <p className="text-sm text-gray-700 mb-3">We couldn't generate your AI summary right now.</p>
+          <p className="text-xs text-gray-400 mb-5">You can try again or continue -- this won't affect your experience.</p>
           <button
             type="button"
             onClick={() => fetchSummary()}
-            className="vitallity-btn-primary"
+            className="vitallity-btn-secondary text-sm px-5 py-2.5"
           >
             Try Again
           </button>
@@ -2087,7 +2088,7 @@ function Screen8AISummary({
   return (
     <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
-      <p className="text-gray-500 text-sm mb-6">A snapshot based on everything you\'ve shared</p>
+      <p className="text-gray-500 text-sm mb-6">A snapshot based on everything you've shared</p>
 
       {/* Profile Snapshot - gradient card */}
       <div
