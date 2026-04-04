@@ -11,6 +11,7 @@ import {
   ChevronDown, ChevronUp, Pencil,
   Brain, Eye, Shield, Zap, BarChart2, RefreshCw, ChevronRight,
   User, ListChecks, Send, MessageCircle, Utensils, Sheet,
+  Mic, MicOff, Star, Compass,
 } from "lucide-react";
 
 // ─── Why We Ask Tooltip ────────────────────────────────────
@@ -210,7 +211,16 @@ const healthConditionOptions = [
   "Knee Replacement", "IBS/Digestive Issues", "Chronic Migraine",
   "Depression/Anxiety", "Sleep Apnea", "Sciatica",
   "Cervical Spondylosis", "Lumbar Spondylosis",
-  "Compressed Nerve", "None currently",
+  "Compressed Nerve",
+  // Musculoskeletal
+  "Plantar Fasciitis", "Carpal Tunnel",
+  // Digestive
+  "Acid Reflux/GERD", "Celiac Disease", "Lactose Intolerance",
+  // Hormonal
+  "Perimenopause", "Menopause", "Endometriosis",
+  // Mental
+  "Burnout", "PTSD", "OCD",
+  "None currently",
 ];
 
 const durationOptions = [
@@ -223,8 +233,8 @@ const acuteOptions = [
   "Lumbar Spondylosis", "Cervical Spondylosis", "Sciatica", "Herniated Disc",
   "Plantar Fasciitis", "Frozen Shoulder", "Carpal Tunnel", "Tennis Elbow",
   "Rotator Cuff Injury", "Shin Splints", "ACL/MCL Injury", "Active Migraine",
-  "Cold/Flu", "Viral Fever", "Sprained Ankle", "Fracture (healing)",
-  "Post-Surgery Recovery", "Pregnancy", "Postpartum",
+  "Cold/Flu", "Viral Fever", "Sprained Ankle", "Sprain", "Fracture (healing)",
+  "Post-Surgery Recovery", "Food Poisoning", "Pregnancy", "Postpartum",
 ];
 
 const familyHistoryOptions = [
@@ -404,6 +414,8 @@ interface OnboardingData {
   exerciseComfort: string;
   activities: string[];
   fitnessTrackers: string[];
+  gymAccess: string;
+  trainerFrequency: string;
   // Screen 5: Diet & Eating
   snackingHabit: string;
   dietaryPrefs: string[];
@@ -423,6 +435,9 @@ interface OnboardingData {
   constraintOther: string;
   // Screen 7: What Worked
   pastAttemptsWorked: string;
+  pastAttemptsDidntWork: string;
+  startingBarrier: string;
+  barrierTimeframe: string;
   // Screen 8: Goals
   goals: string[];
   customGoal: string;
@@ -457,12 +472,13 @@ const defaultData: OnboardingData = {
   familyConditions: [], familyHistoryOther: "",
   painAreas: [], autoSuggestedPain: [], customPainArea: "",
   occupationActivity: "", exerciseHistoryOption: "", exerciseComfort: "", activities: [], fitnessTrackers: [],
+  gymAccess: "", trainerFrequency: "",
   snackingHabit: "", dietaryPrefs: [], customDietPref: "", mealsPerDay: "", cookingStyle: "",
   eatingChallenges: [], eatingNotes: "", dietHistory: "",
   sleepHours: "", sleepQuality: "", sleepIssues: [],
   stressLevel: "", stressSources: [],
   constraintChoices: [], constraintOther: "",
-  pastAttemptsWorked: "",
+  pastAttemptsWorked: "", pastAttemptsDidntWork: "", startingBarrier: "", barrierTimeframe: "",
   goals: [], customGoal: "", targetWeightKg: 65, targetWeightUnit: "kg", weightTimeline: "", bmiUnderstand: false,
   nutritionKnowledge: 5, exerciseKnowledge: 5, selfDiscipline: 5, consistencyHistory: 5, whyNow: "",
   milestones: [],
@@ -628,6 +644,8 @@ export default function Onboarding() {
             exerciseHistoryOption: data.exerciseHistoryOption,
             exerciseComfort: data.exerciseComfort,
             activities: data.activities,
+            gymAccess: data.gymAccess,
+            trainerFrequency: data.trainerFrequency,
           };
           break;
         case 5:
@@ -652,7 +670,12 @@ export default function Onboarding() {
           };
           break;
         case 7:
-          body = { pastAttemptsWorked: data.pastAttemptsWorked };
+          body = {
+            pastAttemptsWorked: data.pastAttemptsWorked,
+            pastAttemptsDidntWork: data.pastAttemptsDidntWork,
+            startingBarrier: data.startingBarrier,
+            barrierTimeframe: data.barrierTimeframe,
+          };
           break;
         case 8:
           // AI Health Summary screen - no save needed, just advance
@@ -1359,8 +1382,298 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
             />
           </div>
         </div>
+
+        {/* Auto-detect health suggestions */}
+        {(() => {
+          const ageNum = parseInt(data.age) || 0;
+          const bmiVal = data.heightCm && data.weightKg ? data.weightKg / Math.pow(data.heightCm / 100, 2) : 0;
+          const condNames = data.healthConditions.map(c => c.condition);
+          const cards: { id: string; message: string; addLabel?: string; addCondition?: string }[] = [];
+
+          if (data.gender === "Female" && ageNum >= 42 && ageNum < 50 && !condNames.includes("Perimenopause")) {
+            cards.push({
+              id: "perimenopause",
+              message: "Women over 42 may experience perimenopause symptoms. Would you like to add this?",
+              addLabel: "Add Perimenopause",
+              addCondition: "Perimenopause",
+            });
+          }
+          if (data.gender === "Female" && ageNum >= 50 && !condNames.includes("Menopause")) {
+            cards.push({
+              id: "menopause",
+              message: "Women over 50 commonly experience menopause. Would you like to add this?",
+              addLabel: "Add Menopause",
+              addCondition: "Menopause",
+            });
+          }
+          if (ageNum >= 40 && (condNames.includes("Hypertension") || condNames.includes("Type 2 Diabetes") || condNames.includes("Heart Condition"))) {
+            cards.push({
+              id: "cardiac-screening",
+              message: "Consider regular cardiac screening -- your age and conditions increase cardiovascular risk.",
+            });
+          }
+          if (bmiVal >= 35) {
+            cards.push({
+              id: "bmi-supervision",
+              message: "Your BMI suggests you may benefit from medical supervision for weight management.",
+            });
+          }
+
+          if (cards.length === 0) return null;
+          return (
+            <div className="space-y-3" data-testid="auto-detect-cards">
+              {cards.map(card => (
+                <div key={card.id} className="bg-amber-50 border border-amber-200 rounded-[14px] p-4">
+                  <div className="flex items-start gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 leading-relaxed">{card.message}</p>
+                  </div>
+                  {card.addCondition && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleConditionChange([...selectedConditionNames, card.addCondition!])}
+                        className="text-xs font-semibold text-amber-800 bg-amber-200 hover:bg-amber-300 rounded-full px-3 py-1 transition-colors"
+                        data-testid={`auto-add-${card.id}`}
+                      >
+                        {card.addLabel}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </div>
+  );
+}
+
+// ─── Body Diagram: line-art silhouette with radial pain spots ─
+interface PainSpot { area: string; cx: number; cy: number; view: "front" | "back" | "both"; }
+
+// Maps body area names to their (cx, cy) spot positions on the front/back view
+const FRONT_SPOTS: PainSpot[] = [
+  { area: "Head", cx: 130, cy: 28, view: "front" },
+  { area: "Neck", cx: 130, cy: 68, view: "front" },
+  { area: "Left Shoulder", cx: 156, cy: 83, view: "front" },
+  { area: "Right Shoulder", cx: 104, cy: 83, view: "front" },
+  { area: "Chest", cx: 130, cy: 107, view: "front" },
+  { area: "Abdomen", cx: 130, cy: 145, view: "front" },
+  { area: "Left Upper Arm", cx: 162, cy: 113, view: "front" },
+  { area: "Right Upper Arm", cx: 98, cy: 113, view: "front" },
+  { area: "Left Elbow", cx: 162, cy: 137, view: "front" },
+  { area: "Right Elbow", cx: 98, cy: 137, view: "front" },
+  { area: "Left Forearm", cx: 162, cy: 162, view: "front" },
+  { area: "Right Forearm", cx: 98, cy: 162, view: "front" },
+  { area: "Left Wrist", cx: 158, cy: 185, view: "front" },
+  { area: "Right Wrist", cx: 102, cy: 185, view: "front" },
+  { area: "Left Hand", cx: 158, cy: 203, view: "front" },
+  { area: "Right Hand", cx: 102, cy: 203, view: "front" },
+  { area: "Left Hip", cx: 145, cy: 183, view: "front" },
+  { area: "Right Hip", cx: 115, cy: 183, view: "front" },
+  { area: "Left Thigh", cx: 143, cy: 228, view: "front" },
+  { area: "Right Thigh", cx: 117, cy: 228, view: "front" },
+  { area: "Left Knee", cx: 142, cy: 268, view: "front" },
+  { area: "Right Knee", cx: 118, cy: 268, view: "front" },
+  { area: "Left Shin/Calf", cx: 138, cy: 308, view: "front" },
+  { area: "Right Shin/Calf", cx: 122, cy: 308, view: "front" },
+  { area: "Left Ankle", cx: 136, cy: 344, view: "front" },
+  { area: "Right Ankle", cx: 124, cy: 344, view: "front" },
+  { area: "Left Foot", cx: 138, cy: 362, view: "front" },
+  { area: "Right Foot", cx: 122, cy: 362, view: "front" },
+];
+
+const BACK_SPOTS: PainSpot[] = [
+  { area: "Head", cx: 130, cy: 28, view: "back" },
+  { area: "Neck (rear)", cx: 130, cy: 68, view: "back" },
+  { area: "Left Rear Shoulder", cx: 156, cy: 83, view: "back" },
+  { area: "Right Rear Shoulder", cx: 104, cy: 83, view: "back" },
+  { area: "Upper Back", cx: 130, cy: 104, view: "back" },
+  { area: "Mid Back", cx: 130, cy: 130, view: "back" },
+  { area: "Lower Back", cx: 130, cy: 155, view: "back" },
+  { area: "Left Tricep", cx: 162, cy: 113, view: "back" },
+  { area: "Right Tricep", cx: 98, cy: 113, view: "back" },
+  { area: "Left Forearm", cx: 162, cy: 162, view: "back" },
+  { area: "Right Forearm", cx: 98, cy: 162, view: "back" },
+  { area: "Glutes", cx: 130, cy: 190, view: "back" },
+  { area: "Left Hamstring", cx: 143, cy: 235, view: "back" },
+  { area: "Right Hamstring", cx: 117, cy: 235, view: "back" },
+  { area: "Left Knee", cx: 140, cy: 274, view: "back" },
+  { area: "Right Knee", cx: 120, cy: 274, view: "back" },
+  { area: "Left Calf (rear)", cx: 133, cy: 310, view: "back" },
+  { area: "Right Calf (rear)", cx: 127, cy: 310, view: "back" },
+  { area: "Left Foot", cx: 138, cy: 352, view: "back" },
+  { area: "Right Foot", cx: 122, cy: 352, view: "back" },
+];
+
+// Compute BMI-based body silhouette variant
+function getBodyVariant(gender: string, bmi: number): "male-slim" | "male-avg" | "female-slim" | "female-avg" {
+  const isFemale = gender === "Female";
+  const isSlim = bmi < 25;
+  if (isFemale) return isSlim ? "female-slim" : "female-avg";
+  return isSlim ? "male-slim" : "male-avg";
+}
+
+// Clickable hotspot size
+const HIT_R = 18;
+
+function BodySilhouetteSVG({
+  view,
+  variant,
+  selectedAreas,
+  autoSuggestedAreas,
+  onToggle,
+}: {
+  view: "front" | "back";
+  variant: "male-slim" | "male-avg" | "female-slim" | "female-avg";
+  selectedAreas: string[];
+  autoSuggestedAreas: string[];
+  onToggle: (area: string) => void;
+}) {
+  const spots = view === "front" ? FRONT_SPOTS : BACK_SPOTS;
+
+  // Body silhouette path data per variant (front / back encoded together as one viewBox 0 0 260 420)
+  const outlines: Record<string, { front: string; back: string }> = {
+    "male-slim": {
+      front: `M130,10 C119,10 110,18 109,30 C108,42 114,52 122,56 L122,65 C118,66 116,70 116,75
+              L102,72 C94,70 87,75 87,82 C87,89 94,95 102,97 L100,140 L95,145 L90,185
+              L88,200 L93,215 L93,200 L96,220 L98,278 L96,345 L98,370 L102,375 L110,375 L114,345 L116,280
+              L118,260 L120,202 L122,202 L124,260 L126,280 L126,345 L130,375 L134,375 L138,345 L140,280
+              L142,260 L140,202 L142,202 L144,260 L146,280 L146,345 L150,375 L158,375 L162,370 L164,345
+              L162,278 L164,220 L167,200 L167,215 L172,200 L170,185 L165,145 L160,140 L158,97
+              C166,95 173,89 173,82 C173,75 166,70 158,72 L144,75 C144,70 142,66 138,65 L138,56
+              C146,52 152,42 151,30 C150,18 141,10 130,10 Z`,
+      back: `M130,10 C119,10 110,18 109,30 C108,42 114,52 122,56 L122,65 C118,66 116,70 116,75
+             L102,72 C94,70 87,75 87,82 C87,89 94,95 102,97 L100,140 L95,145 L90,185
+             L88,200 L93,215 L93,200 L96,220 L98,278 L96,345 L98,370 L102,375 L110,375 L114,345 L116,280
+             L118,260 L120,202 L122,202 L124,260 L126,280 L126,345 L130,375 L134,375 L138,345 L140,280
+             L142,260 L140,202 L142,202 L144,260 L146,280 L146,345 L150,375 L158,375 L162,370 L164,345
+             L162,278 L164,220 L167,200 L167,215 L172,200 L170,185 L165,145 L160,140 L158,97
+             C166,95 173,89 173,82 C173,75 166,70 158,72 L144,75 C144,70 142,66 138,65 L138,56
+             C146,52 152,42 151,30 C150,18 141,10 130,10 Z`,
+    },
+    "male-avg": {
+      front: `M130,10 C118,10 108,19 107,31 C106,43 113,53 122,57 L122,66 C117,67 114,72 114,78
+              L98,74 C89,72 81,77 81,85 C81,93 89,100 98,102 L96,145 L90,152 L84,195
+              L82,212 L88,228 L88,212 L92,235 L94,285 L92,348 L94,372 L100,376 L110,376 L114,348 L116,288
+              L119,264 L120,204 L122,204 L125,264 L126,288 L126,348 L130,376 L134,376 L134,348 L134,288
+              L135,264 L138,204 L140,204 L141,264 L144,288 L144,348 L150,376 L160,376 L166,372 L168,348
+              L166,285 L168,235 L172,212 L172,228 L178,212 L176,195 L170,152 L164,145 L162,102
+              C171,100 179,93 179,85 C179,77 171,72 162,74 L146,78 C146,72 143,67 138,66 L138,57
+              C147,53 154,43 153,31 C152,19 142,10 130,10 Z`,
+      back: `M130,10 C118,10 108,19 107,31 C106,43 113,53 122,57 L122,66 C117,67 114,72 114,78
+             L98,74 C89,72 81,77 81,85 C81,93 89,100 98,102 L96,145 L90,152 L84,195
+             L82,212 L88,228 L88,212 L92,235 L94,285 L92,348 L94,372 L100,376 L110,376 L114,348 L116,288
+             L119,264 L120,204 L122,204 L125,264 L126,288 L126,348 L130,376 L134,376 L134,348 L134,288
+             L135,264 L138,204 L140,204 L141,264 L144,288 L144,348 L150,376 L160,376 L166,372 L168,348
+             L166,285 L168,235 L172,212 L172,228 L178,212 L176,195 L170,152 L164,145 L162,102
+             C171,100 179,93 179,85 C179,77 171,72 162,74 L146,78 C146,72 143,67 138,66 L138,57
+             C147,53 154,43 153,31 C152,19 142,10 130,10 Z`,
+    },
+    "female-slim": {
+      front: `M130,10 C119,10 111,18 110,29 C109,40 115,50 122,54 L122,63 C119,64 117,68 117,73
+              L105,70 C97,68 91,73 91,80 C91,87 97,93 105,95 L103,136 L98,143 L95,180
+              C94,188 95,196 98,200 C101,205 108,210 116,215 C121,218 126,220 130,220
+              C134,220 139,218 144,215 C152,210 159,205 162,200 C165,196 166,188 165,180 L162,143 L157,136
+              L155,95 C163,93 169,87 169,80 C169,73 163,68 155,70 L143,73 C143,68 141,64 138,63
+              L138,54 C145,50 151,40 150,29 C149,18 141,10 130,10 Z
+              M116,215 L114,252 L112,278 L110,345 L113,370 L118,374 L126,374 L128,348 L130,345
+              L132,348 L134,374 L142,374 L147,370 L150,345 L148,278 L146,252 L144,215`,
+      back: `M130,10 C119,10 111,18 110,29 C109,40 115,50 122,54 L122,63 C119,64 117,68 117,73
+             L105,70 C97,68 91,73 91,80 C91,87 97,93 105,95 L103,136 L98,143 L95,180
+             C94,188 95,196 98,200 C101,205 108,210 116,215 C121,218 126,220 130,220
+             C134,220 139,218 144,215 C152,210 159,205 162,200 C165,196 166,188 165,180 L162,143 L157,136
+             L155,95 C163,93 169,87 169,80 C169,73 163,68 155,70 L143,73 C143,68 141,64 138,63
+             L138,54 C145,50 151,40 150,29 C149,18 141,10 130,10 Z
+             M116,215 L114,252 L112,278 L110,345 L113,370 L118,374 L126,374 L128,348 L130,345
+             L132,348 L134,374 L142,374 L147,370 L150,345 L148,278 L146,252 L144,215`,
+    },
+    "female-avg": {
+      front: `M130,10 C118,10 109,19 108,30 C107,42 114,52 122,56 L122,65 C118,66 115,71 115,77
+              L100,73 C91,71 84,77 84,84 C84,91 91,98 100,100 L98,140 L92,148 L87,188
+              C85,198 87,208 91,214 C95,220 105,228 118,234 C123,237 127,240 130,240
+              C133,240 137,237 142,234 C155,228 165,220 169,214 C173,208 175,198 173,188
+              L168,148 L162,140 L160,100 C169,98 176,91 176,84 C176,77 169,71 160,73
+              L145,77 C145,71 142,66 138,65 L138,56 C146,52 153,42 152,30 C151,19 142,10 130,10 Z
+              M118,234 L116,265 L114,290 L112,350 L115,372 L122,376 L128,376 L130,350
+              L132,376 L138,376 L145,372 L148,350 L146,290 L144,265 L142,234`,
+      back: `M130,10 C118,10 109,19 108,30 C107,42 114,52 122,56 L122,65 C118,66 115,71 115,77
+             L100,73 C91,71 84,77 84,84 C84,91 91,98 100,100 L98,140 L92,148 L87,188
+             C85,198 87,208 91,214 C95,220 105,228 118,234 C123,237 127,240 130,240
+             C133,240 137,237 142,234 C155,228 165,220 169,214 C173,208 175,198 173,188
+             L168,148 L162,140 L160,100 C169,98 176,91 176,84 C176,77 169,71 160,73
+             L145,77 C145,71 142,66 138,65 L138,56 C146,52 153,42 152,30 C151,19 142,10 130,10 Z
+             M118,234 L116,265 L114,290 L112,350 L115,372 L122,376 L128,376 L130,350
+             L132,376 L138,376 L145,372 L148,350 L146,290 L144,265 L142,234`,
+    },
+  };
+
+  const pathData = outlines[variant][view];
+
+  return (
+    <svg viewBox="0 0 260 400" className="w-[200px] h-[340px]" aria-label={`Human body ${view} view`}>
+      <defs>
+        <radialGradient id="painGradient" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ef4444" stopOpacity="0.9" />
+          <stop offset="60%" stopColor="#ef4444" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="autoGradient" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#f97316" stopOpacity="0.7" />
+          <stop offset="60%" stopColor="#f97316" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+        </radialGradient>
+        <style>{`
+          @keyframes painPulse {
+            0%, 100% { r: 10; opacity: 0.9; }
+            50% { r: 14; opacity: 0.6; }
+          }
+          .pain-spot { animation: painPulse 1.8s ease-in-out infinite; }
+        `}</style>
+      </defs>
+
+      {/* Body silhouette -- line art */}
+      <path
+        d={pathData}
+        stroke="#1A1A1A"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+
+      {/* Pain spots */}
+      {spots.map(spot => {
+        const selected = selectedAreas.includes(spot.area);
+        const auto = autoSuggestedAreas.includes(spot.area);
+        return (
+          <g key={spot.area}>
+            {/* Invisible hit target */}
+            <circle
+              cx={spot.cx}
+              cy={spot.cy}
+              r={HIT_R}
+              fill="transparent"
+              className="cursor-pointer"
+              onClick={() => onToggle(spot.area)}
+              data-testid={`spot-${spot.area.toLowerCase().replace(/[\s/()]+/g, "-")}`}
+            />
+            {/* Pain indicator */}
+            {(selected || auto) && (
+              <circle
+                cx={spot.cx}
+                cy={spot.cy}
+                r={10}
+                fill={selected ? "url(#painGradient)" : "url(#autoGradient)"}
+                className={selected ? "pain-spot" : ""}
+              />
+            )}
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -1381,14 +1694,11 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
     }
   };
 
-  const isSelected = (area: string) => data.painAreas.includes(area);
-  const isAutoSuggested = (area: string) => data.autoSuggestedPain.includes(area);
-
-  const regionFill = (area: string) => {
-    if (isSelected(area)) return "fill-primary/20 stroke-primary";
-    if (isAutoSuggested(area)) return "fill-primary/10 stroke-primary/50";
-    return "fill-transparent stroke-text-light/30";
-  };
+  const bmi2 = useMemo(() => {
+    if (!data.heightCm || !data.weightKg) return 22;
+    return data.weightKg / Math.pow(data.heightCm / 100, 2);
+  }, [data.heightCm, data.weightKg]);
+  const bodyVariant = getBodyVariant(data.gender, bmi2);
 
   const addCustomPain = () => {
     if (data.customPainArea.trim() && !data.painAreas.includes(data.customPainArea.trim())) {
@@ -1438,353 +1748,15 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
         </button>
       </div>
 
-      {/* SVG Body Diagrams */}
-      <div className="flex justify-center mb-4">
-        {bodyView === "front" ? (
-          <svg viewBox="0 0 260 420" className="w-[220px] h-[370px]" aria-label="Human body front view pain map">
-            {/* ── FRONT VIEW ── */}
-
-            {/* Head */}
-            <path d="M130,12 C118,12 108,20 107,31 C106,42 112,52 120,55 C124,57 126,60 126,64 L134,64 C134,60 136,57 140,55 C148,52 154,42 153,31 C152,20 142,12 130,12 Z"
-              className={`${regionFill("Head")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Head")} data-testid="svg-head"
-            />
-            {isSelected("Head") && <text x="145" y="22" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">Head</text>}
-
-            {/* Neck */}
-            <path d="M122,64 L122,78 C122,81 125,83 130,83 C135,83 138,81 138,78 L138,64 Z"
-              className={`${regionFill("Neck")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Neck")} data-testid="svg-neck"
-            />
-            {isSelected("Neck") && <text x="142" y="74" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">Neck</text>}
-
-            {/* Left Shoulder (body-left = screen-right of center) */}
-            <path d="M138,78 C138,78 148,76 156,72 C162,69 167,73 167,79 C167,85 162,90 155,92 C148,94 140,92 138,90 Z"
-              className={`${regionFill("Left Shoulder")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Shoulder")} data-testid="svg-left-shoulder"
-            />
-            {isSelected("Left Shoulder") && <text x="158" y="70" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Shoulder</text>}
-
-            {/* Right Shoulder */}
-            <path d="M122,78 C122,78 112,76 104,72 C98,69 93,73 93,79 C93,85 98,90 105,92 C112,94 120,92 122,90 Z"
-              className={`${regionFill("Right Shoulder")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Shoulder")} data-testid="svg-right-shoulder"
-            />
-            {isSelected("Right Shoulder") && <text x="64" y="70" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">R Shoulder</text>}
-
-            {/* Chest */}
-            <path d="M122,84 C120,84 105,88 103,96 C101,104 102,114 104,120 C106,126 110,128 122,128 L138,128 C150,128 154,126 156,120 C158,114 159,104 157,96 C155,88 140,84 138,84 Z"
-              className={`${regionFill("Chest")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Chest")} data-testid="svg-chest"
-            />
-            {isSelected("Chest") && <text x="121" y="110" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Chest</text>}
-
-            {/* Abdomen */}
-            <path d="M104,120 C103,126 102,136 103,146 C104,156 106,162 110,165 C114,168 120,170 130,170 C140,170 146,168 150,165 C154,162 156,156 157,146 C158,136 157,126 156,120 C150,123 140,125 130,125 C120,125 110,123 104,120 Z"
-              className={`${regionFill("Abdomen")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Abdomen")} data-testid="svg-abdomen"
-            />
-            {isSelected("Abdomen") && <text x="130" y="148" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Abdomen</text>}
-
-            {/* Left Upper Arm */}
-            <path d="M155,92 C157,95 162,100 166,108 C169,115 169,124 167,130 C165,134 162,136 160,136 C157,136 154,134 153,130 C151,124 150,115 150,108 C149,100 150,93 155,92 Z"
-              className={`${regionFill("Left Upper Arm")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Upper Arm")} data-testid="svg-left-upper-arm"
-            />
-            {isSelected("Left Upper Arm") && <text x="172" y="112" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Arm</text>}
-
-            {/* Right Upper Arm */}
-            <path d="M105,92 C103,95 98,100 94,108 C91,115 91,124 93,130 C95,134 98,136 100,136 C103,136 106,134 107,130 C109,124 110,115 110,108 C111,100 110,93 105,92 Z"
-              className={`${regionFill("Right Upper Arm")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Upper Arm")} data-testid="svg-right-upper-arm"
-            />
-            {isSelected("Right Upper Arm") && <text x="72" y="112" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">R Arm</text>}
-
-            {/* Left Elbow */}
-            <ellipse cx="162" cy="137" rx="8" ry="7"
-              className={`${regionFill("Left Elbow")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Elbow")} data-testid="svg-left-elbow"
-            />
-            {isSelected("Left Elbow") && <text x="172" y="140" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Elbow</text>}
-
-            {/* Right Elbow */}
-            <ellipse cx="98" cy="137" rx="8" ry="7"
-              className={`${regionFill("Right Elbow")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Elbow")} data-testid="svg-right-elbow"
-            />
-            {isSelected("Right Elbow") && <text x="62" y="140" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">R Elbow</text>}
-
-            {/* Left Forearm */}
-            <path d="M154,144 C152,150 151,158 151,166 C151,173 153,178 157,180 C161,182 165,180 167,176 C169,172 169,164 168,156 C167,148 164,143 162,143 C160,143 156,143 154,144 Z"
-              className={`${regionFill("Left Forearm")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Forearm")} data-testid="svg-left-forearm"
-            />
-            {isSelected("Left Forearm") && <text x="172" y="162" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Forearm</text>}
-
-            {/* Right Forearm */}
-            <path d="M106,144 C108,150 109,158 109,166 C109,173 107,178 103,180 C99,182 95,180 93,176 C91,172 91,164 92,156 C93,148 96,143 98,143 C100,143 104,143 106,144 Z"
-              className={`${regionFill("Right Forearm")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Forearm")} data-testid="svg-right-forearm"
-            />
-            {isSelected("Right Forearm") && <text x="60" y="162" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Forearm</text>}
-
-            {/* Left Wrist */}
-            <path d="M151,180 C150,183 150,187 151,190 C152,193 155,195 158,195 C161,195 164,193 165,190 C166,187 166,183 165,180 C163,182 160,183 157,183 C154,183 152,182 151,180 Z"
-              className={`${regionFill("Left Wrist")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Wrist")} data-testid="svg-left-wrist"
-            />
-            {isSelected("Left Wrist") && <text x="170" y="188" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Wrist</text>}
-
-            {/* Right Wrist */}
-            <path d="M109,180 C110,183 110,187 109,190 C108,193 105,195 102,195 C99,195 96,193 95,190 C94,187 94,183 95,180 C97,182 100,183 103,183 C106,183 108,182 109,180 Z"
-              className={`${regionFill("Right Wrist")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Wrist")} data-testid="svg-right-wrist"
-            />
-            {isSelected("Right Wrist") && <text x="60" y="188" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Wrist</text>}
-
-            {/* Left Hand */}
-            <path d="M151,190 C149,194 148,200 149,206 C150,211 153,215 158,215 C163,215 166,211 167,206 C168,200 167,194 165,190 C163,193 160,195 157,195 C154,195 152,193 151,190 Z"
-              className={`${regionFill("Left Hand")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Hand")} data-testid="svg-left-hand"
-            />
-            {isSelected("Left Hand") && <text x="170" y="206" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Hand</text>}
-
-            {/* Right Hand */}
-            <path d="M109,190 C111,194 112,200 111,206 C110,211 107,215 102,215 C97,215 94,211 93,206 C92,200 93,194 95,190 C97,193 100,195 103,195 C106,195 108,193 109,190 Z"
-              className={`${regionFill("Right Hand")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Hand")} data-testid="svg-right-hand"
-            />
-            {isSelected("Right Hand") && <text x="60" y="206" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Hand</text>}
-
-            {/* Left Hip */}
-            <path d="M130,170 C137,170 144,171 148,174 C152,177 154,182 154,188 C154,194 151,198 146,200 C141,202 136,202 131,202 L130,202 L130,170 Z"
-              className={`${regionFill("Left Hip")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Hip")} data-testid="svg-left-hip"
-            />
-            {isSelected("Left Hip") && <text x="156" y="186" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Hip</text>}
-
-            {/* Right Hip */}
-            <path d="M130,170 C123,170 116,171 112,174 C108,177 106,182 106,188 C106,194 109,198 114,200 C119,202 124,202 129,202 L130,202 L130,170 Z"
-              className={`${regionFill("Right Hip")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Hip")} data-testid="svg-right-hip"
-            />
-            {isSelected("Right Hip") && <text x="74" y="186" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Hip</text>}
-
-            {/* Left Thigh */}
-            <path d="M131,202 C136,202 141,202 146,200 C148,199 150,197 150,202 C152,212 154,228 153,242 C152,252 148,258 143,260 C138,262 133,261 131,260 L131,202 Z"
-              className={`${regionFill("Left Thigh")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Thigh")} data-testid="svg-left-thigh"
-            />
-            {isSelected("Left Thigh") && <text x="158" y="232" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Thigh</text>}
-
-            {/* Right Thigh */}
-            <path d="M129,202 C124,202 119,202 114,200 C112,199 110,197 110,202 C108,212 106,228 107,242 C108,252 112,258 117,260 C122,262 127,261 129,260 L129,202 Z"
-              className={`${regionFill("Right Thigh")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Thigh")} data-testid="svg-right-thigh"
-            />
-            {isSelected("Right Thigh") && <text x="72" y="232" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Thigh</text>}
-
-            {/* Left Knee */}
-            <ellipse cx="142" cy="268" rx="12" ry="11"
-              className={`${regionFill("Left Knee")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Knee")} data-testid="svg-left-knee"
-            />
-            {isSelected("Left Knee") && <text x="157" y="271" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Knee</text>}
-
-            {/* Right Knee */}
-            <ellipse cx="118" cy="268" rx="12" ry="11"
-              className={`${regionFill("Right Knee")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Knee")} data-testid="svg-right-knee"
-            />
-            {isSelected("Right Knee") && <text x="73" y="271" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Knee</text>}
-
-            {/* Left Shin/Calf */}
-            <path d="M134,279 C136,285 140,295 141,308 C142,320 140,330 137,336 C135,340 132,342 130,342 L131,279 C132,279 133,279 134,279 Z"
-              className={`${regionFill("Left Shin/Calf")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Shin/Calf")} data-testid="svg-left-shin"
-            />
-            {isSelected("Left Shin/Calf") && <text x="146" y="308" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Shin</text>}
-
-            {/* Right Shin/Calf */}
-            <path d="M126,279 C124,285 120,295 119,308 C118,320 120,330 123,336 C125,340 128,342 130,342 L129,279 C128,279 127,279 126,279 Z"
-              className={`${regionFill("Right Shin/Calf")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Shin/Calf")} data-testid="svg-right-shin"
-            />
-            {isSelected("Right Shin/Calf") && <text x="74" y="308" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Shin</text>}
-
-            {/* Left Ankle */}
-            <ellipse cx="136" cy="344" rx="9" ry="7"
-              className={`${regionFill("Left Ankle")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Ankle")} data-testid="svg-left-ankle"
-            />
-            {isSelected("Left Ankle") && <text x="148" y="347" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Ankle</text>}
-
-            {/* Right Ankle */}
-            <ellipse cx="124" cy="344" rx="9" ry="7"
-              className={`${regionFill("Right Ankle")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Ankle")} data-testid="svg-right-ankle"
-            />
-            {isSelected("Right Ankle") && <text x="72" y="347" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Ankle</text>}
-
-            {/* Left Foot */}
-            <path d="M128,351 C131,351 136,352 140,354 C144,356 146,360 145,364 C144,368 140,370 136,370 C132,370 128,368 126,364 C124,360 124,355 126,352 C127,351 127,351 128,351 Z"
-              className={`${regionFill("Left Foot")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Foot")} data-testid="svg-left-foot"
-            />
-            {isSelected("Left Foot") && <text x="148" y="364" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Foot</text>}
-
-            {/* Right Foot */}
-            <path d="M132,351 C129,351 124,352 120,354 C116,356 114,360 115,364 C116,368 120,370 124,370 C128,370 132,368 134,364 C136,360 136,355 134,352 C133,351 133,351 132,351 Z"
-              className={`${regionFill("Right Foot")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Foot")} data-testid="svg-right-foot"
-            />
-            {isSelected("Right Foot") && <text x="72" y="364" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Foot</text>}
-          </svg>
-        ) : (
-          <svg viewBox="0 0 260 420" className="w-[220px] h-[370px]" aria-label="Human body back view pain map">
-            {/* ── BACK VIEW ── */}
-
-            {/* Head (rear) */}
-            <path d="M130,12 C118,12 108,20 107,31 C106,42 112,52 120,55 C124,57 126,60 126,64 L134,64 C134,60 136,57 140,55 C148,52 154,42 153,31 C152,20 142,12 130,12 Z"
-              className={`${regionFill("Head")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Head")} data-testid="svg-head-back"
-            />
-            {isSelected("Head") && <text x="145" y="22" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">Head</text>}
-
-            {/* Neck (rear) */}
-            <path d="M122,64 L122,78 C122,81 125,83 130,83 C135,83 138,81 138,78 L138,64 Z"
-              className={`${regionFill("Neck (rear)")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Neck (rear)")} data-testid="svg-neck-rear"
-            />
-            {isSelected("Neck (rear)") && <text x="142" y="74" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">Neck</text>}
-
-            {/* Left Rear Shoulder */}
-            <path d="M138,78 C138,78 148,76 156,72 C162,69 167,73 167,79 C167,85 162,90 155,92 C148,94 140,92 138,90 Z"
-              className={`${regionFill("Left Rear Shoulder")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Rear Shoulder")} data-testid="svg-left-rear-shoulder"
-            />
-            {isSelected("Left Rear Shoulder") && <text x="158" y="70" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Shoulder</text>}
-
-            {/* Right Rear Shoulder */}
-            <path d="M122,78 C122,78 112,76 104,72 C98,69 93,73 93,79 C93,85 98,90 105,92 C112,94 120,92 122,90 Z"
-              className={`${regionFill("Right Rear Shoulder")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Rear Shoulder")} data-testid="svg-right-rear-shoulder"
-            />
-            {isSelected("Right Rear Shoulder") && <text x="64" y="70" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Shoulder</text>}
-
-            {/* Upper Back */}
-            <path d="M122,84 C120,84 106,87 103,94 C101,100 102,110 103,118 L157,118 C158,110 159,100 157,94 C154,87 140,84 138,84 Z"
-              className={`${regionFill("Upper Back")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Upper Back")} data-testid="svg-upper-back"
-            />
-            {isSelected("Upper Back") && <text x="130" y="104" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Upper Back</text>}
-
-            {/* Mid Back */}
-            <path d="M103,118 L157,118 L158,138 C158,140 155,142 152,143 C148,144 140,145 130,145 C120,145 112,144 108,143 C105,142 102,140 102,138 Z"
-              className={`${regionFill("Mid Back")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Mid Back")} data-testid="svg-mid-back"
-            />
-            {isSelected("Mid Back") && <text x="130" y="133" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Mid Back</text>}
-
-            {/* Lower Back */}
-            <path d="M102,138 C102,140 102,148 103,158 C104,164 107,168 112,170 L148,170 C153,168 156,164 157,158 C158,148 158,140 158,138 L102,138 Z"
-              className={`${regionFill("Lower Back")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Lower Back")} data-testid="svg-lower-back"
-            />
-            {isSelected("Lower Back") && <text x="130" y="157" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Lower Back</text>}
-
-            {/* Left Tricep (back of upper arm) */}
-            <path d="M155,92 C157,95 162,100 166,108 C169,115 169,124 167,130 C165,134 162,136 160,136 C157,136 154,134 153,130 C151,124 150,115 150,108 C149,100 150,93 155,92 Z"
-              className={`${regionFill("Left Tricep")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Tricep")} data-testid="svg-left-tricep"
-            />
-            {isSelected("Left Tricep") && <text x="172" y="112" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Tricep</text>}
-
-            {/* Right Tricep */}
-            <path d="M105,92 C103,95 98,100 94,108 C91,115 91,124 93,130 C95,134 98,136 100,136 C103,136 106,134 107,130 C109,124 110,115 110,108 C111,100 110,93 105,92 Z"
-              className={`${regionFill("Right Tricep")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Tricep")} data-testid="svg-right-tricep"
-            />
-            {isSelected("Right Tricep") && <text x="60" y="112" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Tricep</text>}
-
-            {/* Left Forearm (back view) */}
-            <path d="M154,144 C152,150 151,158 151,166 C151,173 153,178 157,180 C161,182 165,180 167,176 C169,172 169,164 168,156 C167,148 164,143 162,143 C160,143 156,143 154,144 Z"
-              className={`${regionFill("Left Forearm")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Forearm")} data-testid="svg-left-forearm-back"
-            />
-            {isSelected("Left Forearm") && <text x="172" y="162" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Forearm</text>}
-
-            {/* Right Forearm (back view) */}
-            <path d="M106,144 C108,150 109,158 109,166 C109,173 107,178 103,180 C99,182 95,180 93,176 C91,172 91,164 92,156 C93,148 96,143 98,143 C100,143 104,143 106,144 Z"
-              className={`${regionFill("Right Forearm")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Forearm")} data-testid="svg-right-forearm-back"
-            />
-            {isSelected("Right Forearm") && <text x="60" y="162" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Forearm</text>}
-
-            {/* Glutes */}
-            <path d="M112,170 C108,172 104,176 103,184 C102,192 104,200 108,204 C112,208 118,210 124,210 C127,210 129,210 130,210 C131,210 133,210 136,210 C142,210 148,208 152,204 C156,200 158,192 157,184 C156,176 152,172 148,170 Z"
-              className={`${regionFill("Glutes")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Glutes")} data-testid="svg-glutes"
-            />
-            {isSelected("Glutes") && <text x="130" y="192" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="middle">Glutes</text>}
-
-            {/* Left Hamstring */}
-            <path d="M131,210 C136,210 141,210 146,208 C148,207 150,205 150,210 C152,220 153,236 151,250 C149,260 145,266 140,267 C136,268 132,267 131,265 L131,210 Z"
-              className={`${regionFill("Left Hamstring")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Hamstring")} data-testid="svg-left-hamstring"
-            />
-            {isSelected("Left Hamstring") && <text x="158" y="238" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Hamstring</text>}
-
-            {/* Right Hamstring */}
-            <path d="M129,210 C124,210 119,210 114,208 C112,207 110,205 110,210 C108,220 107,236 109,250 C111,260 115,266 120,267 C124,268 128,267 129,265 L129,210 Z"
-              className={`${regionFill("Right Hamstring")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Hamstring")} data-testid="svg-right-hamstring"
-            />
-            {isSelected("Right Hamstring") && <text x="72" y="238" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Hamstring</text>}
-
-            {/* Left Knee (back view) */}
-            <ellipse cx="140" cy="274" rx="12" ry="10"
-              className={`${regionFill("Left Knee")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Knee")} data-testid="svg-left-knee-back"
-            />
-            {isSelected("Left Knee") && <text x="156" y="277" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Knee</text>}
-
-            {/* Right Knee (back view) */}
-            <ellipse cx="120" cy="274" rx="12" ry="10"
-              className={`${regionFill("Right Knee")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Knee")} data-testid="svg-right-knee-back"
-            />
-            {isSelected("Right Knee") && <text x="74" y="277" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Knee</text>}
-
-            {/* Left Calf (rear) */}
-            <path d="M132,284 C134,290 138,302 138,314 C138,325 136,333 133,337 C131,340 130,341 130,341 L131,284 C131,284 132,284 132,284 Z"
-              className={`${regionFill("Left Calf (rear)")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Calf (rear)")} data-testid="svg-left-calf-rear"
-            />
-            {isSelected("Left Calf (rear)") && <text x="144" y="312" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Calf</text>}
-
-            {/* Right Calf (rear) */}
-            <path d="M128,284 C126,290 122,302 122,314 C122,325 124,333 127,337 C129,340 130,341 130,341 L129,284 C129,284 128,284 128,284 Z"
-              className={`${regionFill("Right Calf (rear)")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Calf (rear)")} data-testid="svg-right-calf-rear"
-            />
-            {isSelected("Right Calf (rear)") && <text x="76" y="312" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Calf</text>}
-
-            {/* Left Foot (back view) */}
-            <path d="M130,341 C133,341 138,342 142,344 C146,346 148,350 147,354 C146,358 142,360 138,360 C134,360 130,358 128,354 C126,350 126,344 128,342 Z"
-              className={`${regionFill("Left Foot")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Left Foot")} data-testid="svg-left-foot-back"
-            />
-            {isSelected("Left Foot") && <text x="150" y="352" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80">L Foot</text>}
-
-            {/* Right Foot (back view) */}
-            <path d="M130,341 C127,341 122,342 118,344 C114,346 112,350 113,354 C114,358 118,360 122,360 C126,360 130,358 132,354 C134,350 134,344 132,342 Z"
-              className={`${regionFill("Right Foot")} stroke-[1.5] cursor-pointer transition-colors`}
-              onClick={() => togglePain("Right Foot")} data-testid="svg-right-foot-back"
-            />
-            {isSelected("Right Foot") && <text x="72" y="352" fontSize="9" fill="currentColor" className="pointer-events-none font-medium opacity-80" textAnchor="end">R Foot</text>}
-          </svg>
-        )}
+      {/* Modern line-art body diagram */}
+      <div className="flex justify-center mb-4" data-testid="body-diagram-container">
+        <BodySilhouetteSVG
+          view={bodyView}
+          variant={bodyVariant}
+          selectedAreas={data.painAreas}
+          autoSuggestedAreas={data.autoSuggestedPain}
+          onToggle={togglePain}
+        />
       </div>
 
       {/* Selected areas chips */}
@@ -1809,7 +1781,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
         type="button"
         onClick={() => togglePain("None")}
         className={`w-full py-3 px-4 rounded-2xl border text-sm font-medium transition-all mb-4 ${
-          isSelected("None")
+          data.painAreas.includes("None")
             ? "bg-primary/10 border-primary text-primary"
             : "border-gray-200 text-gray-700 hover:bg-muted/50"
         }`}
@@ -1904,6 +1876,37 @@ function Screen4({ data, update }: { data: OnboardingData; update: <K extends ke
             multiple
           />
         </div>
+
+        {/* Gym / Trainer Access */}
+        <div data-testid="gym-access-section">
+          <label className="vitallity-label">Do you currently have a gym membership or personal trainer?</label>
+          <ChipGroup
+            options={[
+              { label: "No gym access" },
+              { label: "Gym membership" },
+              { label: "Personal trainer" },
+              { label: "Online coach" },
+            ]}
+            selected={data.gymAccess ? [data.gymAccess] : []}
+            onChange={vals => update("gymAccess", vals[0] || "")}
+          />
+        </div>
+
+        {/* Trainer frequency (conditional) */}
+        {(data.gymAccess === "Personal trainer" || data.gymAccess === "Online coach") && (
+          <div data-testid="trainer-frequency-section" className="animate-fade-in-up">
+            <label className="vitallity-label">How often do you work with them?</label>
+            <ChipGroup
+              options={[
+                { label: "1x/week" },
+                { label: "2-3x/week" },
+                { label: "4+/week" },
+              ]}
+              selected={data.trainerFrequency ? [data.trainerFrequency] : []}
+              onChange={vals => update("trainerFrequency", vals[0] || "")}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2163,24 +2166,218 @@ function Screen6({ data, update }: { data: OnboardingData; update: <K extends ke
   );
 }
 
+// ─── Voice Input Hook ────────────────────────────────────
+function useVoiceInput(onResult: (transcript: string) => void) {
+  const [isListening, setIsListening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const start = () => {
+    setError(null);
+    try {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      if (!SpeechRecognition) {
+        setError("Voice input not supported in this browser");
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognitionRef.current = recognition;
+      recognition.onresult = (e: any) => {
+        const transcript = e.results[0][0].transcript;
+        onResult(transcript);
+        setIsListening(false);
+      };
+      recognition.onerror = () => {
+        setError("Voice input failed. Please try again.");
+        setIsListening(false);
+      };
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+      setIsListening(true);
+    } catch {
+      setError("Voice input not supported in this browser");
+    }
+  };
+
+  const stop = () => {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+  };
+
+  return { isListening, error, start, stop };
+}
+
+// ─── VoiceButton: mic button with pulsing indicator ───────────
+function VoiceButton({ onResult }: { onResult: (t: string) => void }) {
+  const { isListening, error, start, stop } = useVoiceInput(onResult);
+  const [showErr, setShowErr] = useState(false);
+
+  const toggle = () => {
+    if (isListening) { stop(); return; }
+    start();
+  };
+
+  useEffect(() => {
+    if (error) { setShowErr(true); const t = setTimeout(() => setShowErr(false), 3000); return () => clearTimeout(t); }
+  }, [error]);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={toggle}
+        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shrink-0 ${
+          isListening ? "bg-red-500 text-white shadow-md" : "bg-muted text-gray-600 hover:bg-muted/80"
+        }`}
+        title={isListening ? "Stop recording" : "Voice input"}
+        data-testid="voice-btn"
+      >
+        {isListening ? (
+          <div className="relative">
+            <Mic className="w-4 h-4" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-300 rounded-full animate-ping" />
+          </div>
+        ) : (
+          <Mic className="w-4 h-4" />
+        )}
+      </button>
+      {showErr && (
+        <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-xs rounded-[10px] p-2 shadow-lg z-10">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Screen 7: What Worked / What Didn't ─────────────────────
 function Screen7({ data, update }: { data: OnboardingData; update: <K extends keyof OnboardingData>(k: K, v: OnboardingData[K]) => void }) {
+  const isExerciser = data.exerciseComfort !== "No exercise currently";
+  const hasConditions = data.healthConditions.filter(c => c.condition !== "None currently").length > 0;
+
+  const workedChips: string[] = [
+    ...(isExerciser ? ["Regular walking", "Gym routine", "Yoga practice"] : []),
+    ...(hasConditions ? ["Following doctor's diet plan", "Taking medications regularly"] : []),
+    "Meal planning", "Tracking calories", "Accountability partner", "Fasting", "Low carb diet",
+  ];
+
+  const appendTo = (field: keyof OnboardingData, value: string) => {
+    const current = (data[field] as string) || "";
+    update(field, current ? `${current}, ${value}` : value);
+  };
+
   return (
     <div data-testid="screen-7" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold mb-1">What worked vs. what didn't</h2>
-      <p className="text-gray-500 text-sm mb-8">Now that we know your history, reflect on past attempts</p>
+      <p className="text-gray-500 text-sm mb-8">Reflect honestly -- understanding patterns helps us plan around them</p>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
+        {/* Section 1: What worked */}
         <div>
-          <label className="vitallity-label">Past Attempts</label>
-          <textarea
-            value={data.pastAttemptsWorked}
-            onChange={e => update("pastAttemptsWorked", e.target.value)}
-            rows={8}
-            placeholder="Be honest -- it's genuinely helpful. 'Keto worked for 2 months but unsustainable. Walking was great until monsoons. I'm good with discipline for 3 weeks then fall off...'"
-            className="vitallity-input resize-none"
-            data-testid="input-past-attempts"
-          />
+          <label className="vitallity-label">What has worked for you before?</label>
+          <div className="flex gap-2">
+            <textarea
+              value={data.pastAttemptsWorked}
+              onChange={e => update("pastAttemptsWorked", e.target.value)}
+              rows={4}
+              placeholder="e.g., morning walks, meal prep, yoga..."
+              className="vitallity-input resize-none flex-1"
+              data-testid="input-what-worked"
+            />
+            <VoiceButton onResult={t => appendTo("pastAttemptsWorked", t)} />
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {workedChips.map(chip => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => appendTo("pastAttemptsWorked", chip)}
+                className="inline-flex items-center gap-1 bg-primary/8 text-primary rounded-full px-3 py-1 text-xs font-medium hover:bg-primary/15 transition-colors"
+                data-testid={`worked-chip-${chip.toLowerCase().replace(/[\s']+/g, "-")}`}
+              >
+                <Plus className="w-3 h-3" />{chip}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 2: What didn't work */}
+        <div>
+          <label className="vitallity-label">What hasn't worked or what stopped you?</label>
+          <div className="flex gap-2">
+            <textarea
+              value={data.pastAttemptsDidntWork}
+              onChange={e => update("pastAttemptsDidntWork", e.target.value)}
+              rows={4}
+              placeholder="e.g., time constraints, injuries, motivation..."
+              className="vitallity-input resize-none flex-1"
+              data-testid="input-what-didnt-work"
+            />
+            <VoiceButton onResult={t => appendTo("pastAttemptsDidntWork", t)} />
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {["Lost motivation", "Got injured", "Too busy", "Plateaued", "Too restrictive", "No accountability", "Stress eating", "Travel disrupted routine"].map(chip => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => appendTo("pastAttemptsDidntWork", chip)}
+                className="inline-flex items-center gap-1 bg-rose-50 text-rose-600 rounded-full px-3 py-1 text-xs font-medium hover:bg-rose-100 transition-colors"
+                data-testid={`didnt-work-chip-${chip.toLowerCase().replace(/[\s']+/g, "-")}`}
+              >
+                <Plus className="w-3 h-3" />{chip}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 3: Starting barrier */}
+        <div>
+          <label className="vitallity-label">What stops you from starting today?</label>
+          <div className="flex gap-2">
+            <textarea
+              value={data.startingBarrier}
+              onChange={e => update("startingBarrier", e.target.value)}
+              rows={3}
+              placeholder="Be honest -- understanding barriers helps us plan around them"
+              className="vitallity-input resize-none flex-1"
+              data-testid="input-starting-barrier"
+            />
+            <VoiceButton onResult={t => appendTo("startingBarrier", t)} />
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {["Work schedule", "Physical pain", "Low motivation", "Don't know where to start", "Family commitments", "Financial constraints", "Mental health", "Nothing -- I'm ready"].map(chip => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => appendTo("startingBarrier", chip)}
+                className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 rounded-full px-3 py-1 text-xs font-medium hover:bg-amber-100 transition-colors"
+                data-testid={`barrier-chip-${chip.toLowerCase().replace(/[\s'--]+/g, "-")}`}
+              >
+                <Plus className="w-3 h-3" />{chip}
+              </button>
+            ))}
+          </div>
+
+          {/* Barrier timeframe follow-up */}
+          {data.startingBarrier.length > 3 && !data.startingBarrier.toLowerCase().includes("ready") && !data.startingBarrier.toLowerCase().includes("nothing") && (
+            <div className="mt-4 animate-fade-in-up" data-testid="barrier-timeframe-section">
+              <label className="vitallity-label">When do you expect this barrier to ease?</label>
+              <ChipGroup
+                options={[
+                  { label: "Within a week" },
+                  { label: "1-2 weeks" },
+                  { label: "1 month" },
+                  { label: "Not sure" },
+                  { label: "It's ongoing" },
+                ]}
+                selected={data.barrierTimeframe ? [data.barrierTimeframe] : []}
+                onChange={vals => update("barrierTimeframe", vals[0] || "")}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -2243,13 +2440,22 @@ function Screen8AISummary({
     setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const sections: { key: keyof HealthSummaryData; label: string; icon: React.ReactNode; isList: boolean }[] = [
-    { key: "observations", label: "Key Observations", icon: <Eye className="w-4 h-4" />, isList: true },
-    { key: "healthConsiderations", label: "Health Considerations", icon: <Shield className="w-4 h-4" />, isList: true },
-    { key: "strengths", label: "Your Strengths", icon: <Zap className="w-4 h-4" />, isList: true },
-    { key: "focusAreas", label: "Areas for Focus", icon: <Target className="w-4 h-4" />, isList: true },
-    { key: "recommendedApproach", label: "Recommended Approach", icon: <BarChart2 className="w-4 h-4" />, isList: false },
+  const sections: { key: keyof HealthSummaryData; label: string; icon: React.ReactNode; isList: boolean; borderColor: string; bgColor: string }[] = [
+    { key: "observations", label: "Key Observations", icon: <Eye className="w-4 h-4" />, isList: true, borderColor: "border-l-amber-400", bgColor: "" },
+    { key: "healthConsiderations", label: "Health Considerations", icon: <Shield className="w-4 h-4" />, isList: true, borderColor: "border-l-red-400", bgColor: "" },
+    { key: "strengths", label: "Your Strengths", icon: <Star className="w-4 h-4" />, isList: true, borderColor: "border-l-green-400", bgColor: "" },
+    { key: "focusAreas", label: "Areas for Focus", icon: <Target className="w-4 h-4" />, isList: true, borderColor: "border-l-primary", bgColor: "" },
+    { key: "recommendedApproach", label: "Recommended Approach", icon: <Compass className="w-4 h-4" />, isList: false, borderColor: "border-l-blue-400", bgColor: "" },
   ];
+
+  // BMI gauge data for profile snapshot
+  const bmiVal = data.heightCm && data.weightKg ? data.weightKg / Math.pow(data.heightCm / 100, 2) : 0;
+  const bmiNeedle = Math.min(Math.max((bmiVal - 15) / (45 - 15), 0), 1); // 0=left, 1=right on 15-45 range
+  // SVG semicircle: 180 degrees, 100px radius centered at (110, 90)
+  const needleAngle = -180 + bmiNeedle * 180; // degrees from left
+  const needleRad = (needleAngle * Math.PI) / 180;
+  const needleX = 110 + 60 * Math.cos(needleRad);
+  const needleY = 90 + 60 * Math.sin(needleRad);
 
   if (loading) {
     return (
@@ -2307,31 +2513,72 @@ function Screen8AISummary({
 
   const hasClarifyingQuestions = healthSummary.clarifyingQuestions && healthSummary.clarifyingQuestions.length > 0;
 
+  const bmiCategory8 = bmiVal < 18.5 ? "Underweight" : bmiVal < 25 ? "Normal" : bmiVal < 30 ? "Overweight" : bmiVal < 35 ? "Obese" : "Severely Obese";
+  const bmiColorStyle = bmiVal < 25 ? "#16a34a" : bmiVal < 30 ? "#f59e0b" : bmiVal < 35 ? "#f97316" : "#ef4444";
+
   return (
     <div data-testid="screen-8-ai-summary" className="animate-fade-in-up">
       <h2 className="font-display text-2xl font-bold tracking-tight mb-1">Your Health Profile</h2>
       <p className="text-gray-500 text-sm mb-6">A snapshot based on everything you've shared</p>
 
-      {/* Profile Snapshot - gradient card */}
+      {/* Enhanced Profile Snapshot card with BMI gauge */}
       <div
         className="rounded-[20px] p-5 mb-5 border border-primary/20"
         style={{ background: "linear-gradient(135deg, rgba(26,58,42,0.08) 0%, rgba(26,58,42,0.02) 100%)" }}
         data-testid="profile-snapshot-card"
       >
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <User className="w-4 h-4 text-primary" />
+        <p className="text-[11px] uppercase tracking-[0.8px] text-primary font-semibold mb-3">Profile Snapshot</p>
+
+        {bmiVal > 0 && (
+          <div className="flex items-start gap-4 mb-4">
+            {/* BMI Speedometer gauge */}
+            <div className="shrink-0" data-testid="bmi-gauge">
+              <svg viewBox="0 0 220 110" width="130" height="65" aria-label="BMI gauge">
+                {/* Green zone: 15-25 (0-37deg of 180) */}
+                <path d="M 20 90 A 90 90 0 0 1 110 0" fill="none" stroke="#16a34a" strokeWidth="10" />
+                {/* Yellow zone: 25-30 */}
+                <path d="M 110 0 A 90 90 0 0 1 164 22" fill="none" stroke="#f59e0b" strokeWidth="10" />
+                {/* Orange zone: 30-35 */}
+                <path d="M 164 22 A 90 90 0 0 1 195 68" fill="none" stroke="#f97316" strokeWidth="10" />
+                {/* Red zone: 35-45 */}
+                <path d="M 195 68 A 90 90 0 0 1 200 90" fill="none" stroke="#ef4444" strokeWidth="10" />
+                {/* Needle */}
+                <line
+                  x1="110" y1="90"
+                  x2={110 + 70 * Math.cos((needleAngle * Math.PI) / 180)}
+                  y2={90 + 70 * Math.sin((needleAngle * Math.PI) / 180)}
+                  stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round"
+                />
+                <circle cx="110" cy="90" r="5" fill="#1A1A1A" />
+                {/* BMI value */}
+                <text x="110" y="108" textAnchor="middle" fontSize="12" fontWeight="bold" fill={bmiColorStyle}>{bmiVal.toFixed(1)}</text>
+              </svg>
+              <p className="text-[10px] text-center text-gray-500 mt-0.5">{bmiCategory8}</p>
+            </div>
+
+            {/* Key stats row */}
+            <div className="grid grid-cols-2 gap-2 flex-1">
+              {[
+                { label: "Age", value: data.age ? `${data.age} yrs` : "--" },
+                { label: "Height", value: data.heightCm ? `${data.heightCm} cm` : "--" },
+                { label: "Weight", value: data.weightKg ? `${data.weightKg} kg` : "--" },
+                { label: "Conditions", value: `${data.healthConditions.filter(c => c.condition !== "None currently").length}` },
+              ].map(stat => (
+                <div key={stat.label} className="bg-white/50 rounded-[10px] p-2 text-center">
+                  <div className="text-xs font-bold text-foreground">{stat.value}</div>
+                  <div className="text-[10px] text-gray-500">{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.8px] text-primary font-semibold mb-1.5">Profile Snapshot</p>
-            <p className="text-sm text-foreground leading-relaxed">{healthSummary.profileSnapshot}</p>
-          </div>
-        </div>
+        )}
+
+        <p className="text-sm text-foreground leading-relaxed">{healthSummary.profileSnapshot}</p>
       </div>
 
-      {/* Collapsible sections */}
+      {/* Collapsible sections with colored left borders, stagger animation */}
       <div className="space-y-2.5">
-        {sections.map(({ key, label, icon, isList }) => {
+        {sections.map(({ key, label, icon, isList, borderColor }, idx) => {
           const value = healthSummary[key];
           const items = isList ? (value as string[]) : [];
           const text = !isList ? (value as string) : "";
@@ -2339,7 +2586,12 @@ function Screen8AISummary({
           const isOpen = openSections[key] ?? false;
 
           return (
-            <div key={key} className="vitallity-card p-0 overflow-hidden" data-testid={`section-${key}`}>
+            <div
+              key={key}
+              className={`vitallity-card p-0 overflow-hidden border-l-4 ${borderColor}`}
+              style={{ animationDelay: `${idx * 100}ms`, animationFillMode: "both" }}
+              data-testid={`section-${key}`}
+            >
               <button
                 type="button"
                 onClick={() => toggleSection(key)}
@@ -2370,29 +2622,40 @@ function Screen8AISummary({
         })}
       </div>
 
-      {/* Clarifying Questions */}
+      {/* Clarifying Questions -- chat-bubble style */}
       {hasClarifyingQuestions && (
-        <div className="mt-5 vitallity-card" data-testid="clarifying-questions">
-          <div className="flex items-center gap-2 mb-4">
-            <Info className="w-4 h-4 text-primary" />
-            <p className="text-sm font-semibold text-foreground">A couple of clarifying questions</p>
-          </div>
+        <div className="mt-5" data-testid="clarifying-questions">
+          <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-3">Clarifying Questions</p>
           <div className="space-y-4">
             {healthSummary.clarifyingQuestions.map((q, i) => (
-              <div key={i}>
-                <label className="vitallity-label">{q}</label>
-                <input
-                  type="text"
-                  value={clarifyAnswers[i] || ""}
-                  onChange={e => {
-                    const next = [...clarifyAnswers];
-                    next[i] = e.target.value;
-                    setClarifyAnswers(next);
-                  }}
-                  placeholder="Your answer..."
-                  className="vitallity-input"
-                  data-testid={`clarify-answer-${i}`}
-                />
+              <div key={i} className="space-y-2">
+                {/* AI question bubble */}
+                <div className="flex items-start gap-2">
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Brain className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <div className="bg-muted rounded-[14px] rounded-tl-sm px-4 py-2.5 text-sm text-foreground max-w-[85%]">
+                    {q}
+                  </div>
+                </div>
+                {/* User answer */}
+                <div className="flex items-start gap-2 flex-row-reverse">
+                  <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                    <User className="w-3.5 h-3.5 text-gray-500" />
+                  </div>
+                  <input
+                    type="text"
+                    value={clarifyAnswers[i] || ""}
+                    onChange={e => {
+                      const next = [...clarifyAnswers];
+                      next[i] = e.target.value;
+                      setClarifyAnswers(next);
+                    }}
+                    placeholder="Your answer..."
+                    className="vitallity-input flex-1 text-sm"
+                    data-testid={`clarify-answer-${i}`}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -2502,6 +2765,29 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
 
   // Derive AI-suggested goals from focusAreas
   const aiSuggestedGoals = healthSummary?.focusAreas?.slice(0, 3) || [];
+
+  // AI-driven weight loss suggestion
+  const tenPctTargetKg = bmi >= 25 ? Math.round(data.weightKg * 0.9 * 10) / 10 : null;
+  const kgToLose = tenPctTargetKg ? Math.round((data.weightKg - tenPctTargetKg) * 10) / 10 : 0;
+  const weeksAtSafeRate = kgToLose > 0 ? Math.ceil(kgToLose / 0.625) : 0; // 0.625 kg/week midpoint
+  const monthsNeeded = Math.round(weeksAtSafeRate / 4.3);
+
+  // Per-goal AI suggestions
+  const goalAISuggestions: Record<string, string> = {
+    "Build Strength": "Start with 2 sessions/week, progressing to 3 by month 2",
+    "Better Sleep": `Target: consistent 7+ hours within 3 weeks${data.sleepHours ? " (current: " + data.sleepHours + ")" : ""}`,
+    "Reduce Stress": `Target: reduce self-rated stress from ${
+      data.stressLevel === "Very High" ? "10" : data.stressLevel === "High" ? "7" : data.stressLevel === "Moderate" ? "5" : "3"
+    } to ${
+      data.stressLevel === "Very High" ? "7" : data.stressLevel === "High" ? "5" : data.stressLevel === "Moderate" ? "3" : "2"
+    } within 4 weeks`,
+    "More Energy": "Target: self-rated energy above 6/10 within 2 weeks through sleep + hydration",
+    "Manage Pain": "Aim to reduce pain intensity by 2 points in 4 weeks through targeted movement",
+  };
+
+  const [showMoreGoals, setShowMoreGoals] = useState(false);
+  const primaryGoals = ["Lose Weight", "Build Strength", "Better Sleep", "Reduce Stress", "More Energy", "Manage Pain"];
+  const moreGoals = filteredGoals.filter(g => !primaryGoals.includes(g.label));
 
   return (
     <div data-testid="screen-9-goals" className="animate-fade-in-up">
@@ -2633,15 +2919,97 @@ function Screen9Goals({ data, update, bmi, healthSummary }: {
           </div>
         )}
 
-        {/* Goal selection */}
+        {/* AI-driven weight loss suggestion */}
+        {bmi >= 25 && tenPctTargetKg && data.goals.includes("Lose Weight") && (
+          <div className="bg-primary-faded border border-primary/20 rounded-[16px] p-4" data-testid="ai-weight-suggestion">
+            <div className="flex items-start gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs font-semibold text-primary">AI Suggestion</p>
+            </div>
+            <p className="text-sm text-foreground mb-1">
+              We suggest going from <strong>{data.weightKg}kg</strong> to <strong>{tenPctTargetKg}kg</strong> over <strong>{monthsNeeded} months</strong>
+            </p>
+            <p className="text-xs text-gray-600 leading-relaxed mb-3">
+              This represents a 10% reduction -- research shows this significantly improves diabetes markers and reduces cardiovascular risk
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                update("targetWeightKg", tenPctTargetKg);
+                update("weightTimeline", monthsNeeded <= 3 ? "3 months" : monthsNeeded <= 6 ? "6 months" : "1 year");
+              }}
+              className="text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-full px-3 py-1 transition-colors"
+              data-testid="accept-ai-weight-suggestion"
+            >
+              Accept this target
+            </button>
+          </div>
+        )}
+
+        {/* Primary goal selection with per-goal AI rationale */}
         <div>
-          <label className="vitallity-label">{aiSuggestedGoals.length > 0 ? 'All Goals' : 'Select Your Goals'}</label>
-          <ChipGroup
-            options={filteredGoals}
-            selected={data.goals}
-            onChange={handleGoalChange}
-            multiple
-          />
+          <label className="vitallity-label">Select Your Goals</label>
+          <div className="space-y-2">
+            {filteredGoals.filter(g => primaryGoals.includes(g.label)).map(goal => {
+              const isGoalSelected = data.goals.includes(goal.label);
+              const suggestion = goalAISuggestions[goal.label];
+              return (
+                <button
+                  key={goal.label}
+                  type="button"
+                  onClick={() => handleGoalChange(
+                    isGoalSelected
+                      ? data.goals.filter(g => g !== goal.label)
+                      : [...data.goals, goal.label]
+                  )}
+                  className={`w-full text-left rounded-[14px] p-3.5 border transition-all ${
+                    isGoalSelected ? "bg-primary/8 border-primary/30" : "bg-card border-gray-200 hover:border-primary/20"
+                  }`}
+                  data-testid={`goal-${goal.label.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                      isGoalSelected ? "border-primary bg-primary" : "border-gray-300"
+                    }`}>
+                      {isGoalSelected && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">{goal.label}</p>
+                      <p className="text-xs text-gray-500">{goal.description}</p>
+                      {isGoalSelected && suggestion && (
+                        <p className="text-xs text-primary mt-1 font-medium">{suggestion}</p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* More goals expandable */}
+          {moreGoals.length > 0 && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setShowMoreGoals(v => !v)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 transition-opacity"
+                data-testid="show-more-goals"
+              >
+                {showMoreGoals ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                {showMoreGoals ? "Hide" : "More goals"}
+              </button>
+              {showMoreGoals && (
+                <div className="mt-2">
+                  <ChipGroup
+                    options={moreGoals}
+                    selected={data.goals}
+                    onChange={handleGoalChange}
+                    multiple
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Reality check based on consistency history */}
