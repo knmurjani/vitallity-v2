@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import bodyFrontImg from "@assets/body-front.png";
+import bodyBackImg from "@assets/body-back.png";
 import { useLocation } from "wouter";
 import { useAuth, useAuthFetch } from "@/hooks/use-auth";
 import { ChipGroup, Chip } from "@/components/ui/chip";
@@ -514,8 +516,10 @@ export default function Onboarding() {
     authFetch("GET", "/api/onboarding/progress")
       .then(res => res.json())
       .then(progress => {
-        // If user has already started the form (step > 0 in DB), skip choice screen
-        if (progress.step && progress.step > 0) {
+        // Only skip the choice screen if user has meaningfully progressed (step >= 2).
+        // Steps 0 and 1 are treated as "not started" so new or barely-started
+        // users always see the choice screen.
+        if (progress.step && progress.step >= 2) {
           setStep(Math.min(progress.step, TOTAL_STEPS));
         } else {
           // Show choice screen (step 0)
@@ -1528,212 +1532,151 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
   );
 }
 
-// ─── Body Diagram: clean minimal silhouette with radial pain spots ─
-interface PainSpot { area: string; cx: number; cy: number; view: "front" | "back" | "both"; }
+// ─── Body Diagram: image-based with CSS hotspot overlays ──────
 
-// Pain spot coordinates for viewBox 0 0 240 420
-const FRONT_SPOTS: PainSpot[] = [
-  { area: "Head", cx: 120, cy: 30, view: "front" },
-  { area: "Neck", cx: 120, cy: 60, view: "front" },
-  { area: "Left Shoulder", cx: 80, cy: 85, view: "front" },
-  { area: "Right Shoulder", cx: 160, cy: 85, view: "front" },
-  { area: "Chest", cx: 120, cy: 110, view: "front" },
-  { area: "Left Upper Arm", cx: 65, cy: 120, view: "front" },
-  { area: "Right Upper Arm", cx: 175, cy: 120, view: "front" },
-  { area: "Left Elbow", cx: 55, cy: 155, view: "front" },
-  { area: "Right Elbow", cx: 185, cy: 155, view: "front" },
-  { area: "Left Forearm", cx: 50, cy: 185, view: "front" },
-  { area: "Right Forearm", cx: 190, cy: 185, view: "front" },
-  { area: "Left Wrist", cx: 48, cy: 210, view: "front" },
-  { area: "Right Wrist", cx: 192, cy: 210, view: "front" },
-  { area: "Abdomen", cx: 120, cy: 165, view: "front" },
-  { area: "Left Hip", cx: 100, cy: 205, view: "front" },
-  { area: "Right Hip", cx: 140, cy: 205, view: "front" },
-  { area: "Left Thigh", cx: 97, cy: 250, view: "front" },
-  { area: "Right Thigh", cx: 143, cy: 250, view: "front" },
-  { area: "Left Knee", cx: 95, cy: 295, view: "front" },
-  { area: "Right Knee", cx: 145, cy: 295, view: "front" },
-  { area: "Left Shin", cx: 93, cy: 330, view: "front" },
-  { area: "Right Shin", cx: 147, cy: 330, view: "front" },
-  { area: "Left Ankle", cx: 92, cy: 370, view: "front" },
-  { area: "Right Ankle", cx: 148, cy: 370, view: "front" },
-  { area: "Left Foot", cx: 90, cy: 395, view: "front" },
-  { area: "Right Foot", cx: 150, cy: 395, view: "front" },
+interface BodyHotspot {
+  area: string;
+  top: string;
+  left: string;
+  w: string;
+  h: string;
+}
+
+const FRONT_HOTSPOTS: BodyHotspot[] = [
+  { area: "Head", top: "3%", left: "44%", w: "12%", h: "7%" },
+  { area: "Neck", top: "11%", left: "45%", w: "10%", h: "3%" },
+  { area: "Left Shoulder", top: "15%", left: "28%", w: "12%", h: "5%" },
+  { area: "Right Shoulder", top: "15%", left: "60%", w: "12%", h: "5%" },
+  { area: "Chest", top: "20%", left: "38%", w: "24%", h: "8%" },
+  { area: "Left Upper Arm", top: "22%", left: "18%", w: "10%", h: "10%" },
+  { area: "Right Upper Arm", top: "22%", left: "72%", w: "10%", h: "10%" },
+  { area: "Left Elbow", top: "33%", left: "14%", w: "8%", h: "5%" },
+  { area: "Right Elbow", top: "33%", left: "78%", w: "8%", h: "5%" },
+  { area: "Left Forearm", top: "38%", left: "10%", w: "10%", h: "8%" },
+  { area: "Right Forearm", top: "38%", left: "80%", w: "10%", h: "8%" },
+  { area: "Abdomen", top: "30%", left: "38%", w: "24%", h: "10%" },
+  { area: "Left Hip", top: "42%", left: "33%", w: "12%", h: "6%" },
+  { area: "Right Hip", top: "42%", left: "55%", w: "12%", h: "6%" },
+  { area: "Left Thigh", top: "50%", left: "32%", w: "14%", h: "12%" },
+  { area: "Right Thigh", top: "50%", left: "54%", w: "14%", h: "12%" },
+  { area: "Left Knee", top: "63%", left: "33%", w: "10%", h: "5%" },
+  { area: "Right Knee", top: "63%", left: "57%", w: "10%", h: "5%" },
+  { area: "Left Shin", top: "70%", left: "33%", w: "10%", h: "10%" },
+  { area: "Right Shin", top: "70%", left: "57%", w: "10%", h: "10%" },
+  { area: "Left Ankle", top: "82%", left: "33%", w: "8%", h: "4%" },
+  { area: "Right Ankle", top: "82%", left: "59%", w: "8%", h: "4%" },
+  { area: "Left Foot", top: "87%", left: "30%", w: "12%", h: "5%" },
+  { area: "Right Foot", top: "87%", left: "58%", w: "12%", h: "5%" },
 ];
 
-const BACK_SPOTS: PainSpot[] = [
-  { area: "Head", cx: 120, cy: 30, view: "back" },
-  { area: "Neck (rear)", cx: 120, cy: 60, view: "back" },
-  { area: "Left Rear Shoulder", cx: 80, cy: 85, view: "back" },
-  { area: "Right Rear Shoulder", cx: 160, cy: 85, view: "back" },
-  { area: "Upper Back", cx: 120, cy: 110, view: "back" },
-  { area: "Left Tricep", cx: 65, cy: 120, view: "back" },
-  { area: "Right Tricep", cx: 175, cy: 120, view: "back" },
-  { area: "Left Elbow", cx: 55, cy: 155, view: "back" },
-  { area: "Right Elbow", cx: 185, cy: 155, view: "back" },
-  { area: "Left Forearm", cx: 50, cy: 185, view: "back" },
-  { area: "Right Forearm", cx: 190, cy: 185, view: "back" },
-  { area: "Mid Back", cx: 120, cy: 145, view: "back" },
-  { area: "Lower Back", cx: 120, cy: 175, view: "back" },
-  { area: "Glutes", cx: 120, cy: 210, view: "back" },
-  { area: "Left Hamstring", cx: 97, cy: 250, view: "back" },
-  { area: "Right Hamstring", cx: 143, cy: 250, view: "back" },
-  { area: "Left Knee", cx: 95, cy: 295, view: "back" },
-  { area: "Right Knee", cx: 145, cy: 295, view: "back" },
-  { area: "Left Calf", cx: 93, cy: 330, view: "back" },
-  { area: "Right Calf", cx: 147, cy: 330, view: "back" },
-  { area: "Left Ankle", cx: 92, cy: 370, view: "back" },
-  { area: "Right Ankle", cx: 148, cy: 370, view: "back" },
-  { area: "Left Foot", cx: 90, cy: 395, view: "back" },
-  { area: "Right Foot", cx: 150, cy: 395, view: "back" },
+const BACK_HOTSPOTS: BodyHotspot[] = [
+  { area: "Head", top: "3%", left: "44%", w: "12%", h: "7%" },
+  { area: "Neck", top: "11%", left: "45%", w: "10%", h: "3%" },
+  { area: "Left Shoulder", top: "15%", left: "28%", w: "12%", h: "5%" },
+  { area: "Right Shoulder", top: "15%", left: "60%", w: "12%", h: "5%" },
+  { area: "Upper Back", top: "20%", left: "38%", w: "24%", h: "8%" },
+  { area: "Mid Back", top: "28%", left: "38%", w: "24%", h: "6%" },
+  { area: "Lower Back", top: "35%", left: "38%", w: "24%", h: "7%" },
+  { area: "Left Tricep", top: "22%", left: "18%", w: "10%", h: "10%" },
+  { area: "Right Tricep", top: "22%", left: "72%", w: "10%", h: "10%" },
+  { area: "Glutes", top: "42%", left: "35%", w: "30%", h: "8%" },
+  { area: "Left Hamstring", top: "52%", left: "32%", w: "14%", h: "12%" },
+  { area: "Right Hamstring", top: "52%", left: "54%", w: "14%", h: "12%" },
+  { area: "Left Knee", top: "63%", left: "33%", w: "10%", h: "5%" },
+  { area: "Right Knee", top: "63%", left: "57%", w: "10%", h: "5%" },
+  { area: "Left Calf", top: "70%", left: "33%", w: "10%", h: "10%" },
+  { area: "Right Calf", top: "70%", left: "57%", w: "10%", h: "10%" },
+  { area: "Left Foot", top: "87%", left: "30%", w: "12%", h: "5%" },
+  { area: "Right Foot", top: "87%", left: "58%", w: "12%", h: "5%" },
 ];
 
-// Clean minimal human silhouette paths — single smooth stroke, viewBox 0 0 240 420
-// Male outline: broader shoulders, straight torso, legs apart
-const MALE_PATH =
-  // Head
-  "M120,8 C109,8 101,16 101,27 C101,38 109,46 120,46 C131,46 139,38 139,27 C139,16 131,8 120,8 Z" +
-  // Neck left side
-  " M113,46 C111,50 110,56 110,62" +
-  // Neck right side
-  " M127,46 C129,50 130,56 130,62" +
-  // Left shoulder and arm outline (outer)
-  " M110,62 C103,63 92,67 80,72 C70,76 62,81 58,88 C54,95 52,107 51,120 C50,133 50,148 51,162 C52,174 54,184 57,193 C59,200 61,207 62,213 C63,217 63,220 62,222" +
-  // Left arm inner (returns up torso side)
-  " M80,72 C83,75 85,82 85,92 C85,104 84,119 84,132 C83,145 83,156 84,165 C85,174 88,181 91,187 C93,192 96,196 99,200" +
-  // Left leg
-  " M99,200 C101,206 103,214 104,224 C105,238 104,254 102,270 C100,285 97,299 95,312 C93,325 92,338 91,350 C90,361 89,371 89,378 C88,385 88,390 88,394 L88,402 C88,407 91,410 96,410 C102,410 108,409 112,409 C115,409 117,410 117,412" +
-  // Crotch line
-  " M117,210 C118,212 120,213 120,213 C120,213 122,212 123,210" +
-  // Right leg
-  " M123,210 C124,215 125,222 126,232 C128,246 131,262 134,278 C137,292 139,306 141,318 C142,330 143,342 144,354 C145,364 147,372 150,378 C151,385 152,390 152,394 L152,402 C152,407 149,410 144,410 C138,410 132,409 128,409 C125,409 123,410 123,412" +
-  // Right torso side
-  " M130,62 C137,63 148,67 160,72 C170,76 178,81 182,88 C155,96 154,112 154,128 C153,143 154,158 155,170 C156,180 157,188 157,196 C157,201 156,205 155,208 C153,211 150,212 148,213" +
-  // Right arm outer
-  " M160,72 C170,76 178,81 182,88 C186,95 188,107 189,120 C190,133 190,148 189,162 C188,174 186,184 183,193 C181,200 179,207 178,213 C177,217 177,220 178,222";
-
-const FEMALE_PATH =
-  // Head (slightly smaller)
-  "M120,8 C110,8 103,16 103,27 C103,38 110,46 120,46 C130,46 137,38 137,27 C137,16 130,8 120,8 Z" +
-  // Neck
-  " M114,46 C112,50 111,56 111,62" +
-  " M126,46 C128,50 129,56 129,62" +
-  // Left shoulder and arm (narrower shoulders)
-  " M111,62 C105,63 95,67 85,72 C77,76 71,81 68,87 C65,93 63,105 62,118 C61,131 61,146 62,160 C63,172 65,182 68,191 C70,198 72,205 73,211 C74,215 74,218 73,220" +
-  // Left torso with waist curve
-  " M85,72 C88,75 90,82 90,91 C90,103 89,116 88,128 C87,139 86,149 85,157 C84,164 84,170 85,176 C87,183 91,191 96,199 C100,206 105,212 109,217" +
-  // Left hip flare
-  " M85,157 C82,161 79,167 78,174 C77,181 79,189 83,196 C87,202 93,207 99,210" +
-  // Left leg
-  " M109,217 C110,222 111,229 111,239 C111,252 109,266 107,280 C105,293 103,306 101,318 C99,330 98,342 97,354 C96,364 95,372 94,378 C93,385 92,390 92,394 L92,402 C92,407 95,410 100,410 C106,410 112,409 116,409 C118,409 119,410 119,412" +
-  // Crotch
-  " M119,218 C120,220 121,221 121,221 C121,221 122,220 121,218" +
-  // Right leg
-  " M121,218 C122,222 123,229 123,239 C124,252 125,266 127,280 C129,293 131,306 133,318 C135,330 136,342 137,354 C138,364 139,372 140,378 C141,385 142,390 142,394 L142,402 C142,407 139,410 134,410 C128,410 122,409 118,409" +
-  // Right torso with waist curve
-  " M129,62 C135,63 145,67 155,72 C163,76 169,81 172,87 C147,95 146,110 145,125 C144,139 145,153 146,164 C147,172 148,180 148,187 C148,194 147,200 144,206 C141,211 137,216 133,219" +
-  // Right hip flare
-  " M155,157 C158,161 161,167 162,174 C163,181 161,189 157,196 C153,202 147,207 141,210" +
-  // Right arm outer
-  " M155,72 C163,76 169,81 172,87 C175,93 177,105 178,118 C179,131 179,146 178,160 C177,172 175,182 172,191 C170,198 168,205 167,211 C166,215 166,218 167,220";
-
-// Clickable hotspot size
-const HIT_R = 18;
-
-function BodySilhouetteSVG({
+function BodyDiagramImage({
   view,
-  gender,
   selectedAreas,
-  autoSuggestedAreas,
   onToggle,
 }: {
   view: "front" | "back";
-  gender: string;
   selectedAreas: string[];
-  autoSuggestedAreas: string[];
   onToggle: (area: string) => void;
 }) {
-  const spots = view === "front" ? FRONT_SPOTS : BACK_SPOTS;
-  const isFemale = gender === "Female";
-  // Use the same outline for front and back (symmetric silhouette)
-  const pathData = isFemale ? FEMALE_PATH : MALE_PATH;
+  const hotspots = view === "front" ? FRONT_HOTSPOTS : BACK_HOTSPOTS;
+  const imgSrc = view === "front" ? bodyFrontImg : bodyBackImg;
 
   return (
-    <svg viewBox="0 0 240 420" className="w-[240px] h-[420px]" aria-label={`Human body ${view} view`}>
-      <defs>
-        <radialGradient id="painGradient" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#ef4444" stopOpacity="0.9" />
-          <stop offset="60%" stopColor="#ef4444" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id="autoGradient" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#f97316" stopOpacity="0.7" />
-          <stop offset="60%" stopColor="#f97316" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
-        </radialGradient>
-        <style>{`
-          @keyframes painPulse {
-            0%, 100% { opacity: 0.9; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.3); }
-          }
-          .pain-spot { animation: painPulse 1.8s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
-        `}</style>
-      </defs>
-
-      {/* Body silhouette -- clean single-stroke line art */}
-      <path
-        d={pathData}
-        stroke="#333"
-        strokeWidth="1.2"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+    <div
+      className="relative w-[260px] h-[460px] mx-auto"
+      aria-label={`Human body ${view} view`}
+    >
+      <img
+        src={imgSrc}
+        alt={`Body ${view} view`}
+        className="w-full h-full object-contain select-none"
+        draggable={false}
       />
-
-      {/* Pain spots */}
-      {spots.map(spot => {
+      {hotspots.map(spot => {
         const selected = selectedAreas.includes(spot.area);
-        const auto = autoSuggestedAreas.includes(spot.area);
+        // Center of the hotspot for the pulse indicator
+        const centerTop = `calc(${spot.top} + ${spot.h} / 2)`;
+        const centerLeft = `calc(${spot.left} + ${spot.w} / 2)`;
         return (
-          <g key={spot.area}>
-            {/* Invisible hit target */}
-            <circle
-              cx={spot.cx}
-              cy={spot.cy}
-              r={HIT_R}
-              fill="transparent"
-              className="cursor-pointer"
+          <React.Fragment key={spot.area}>
+            {/* Invisible clickable hotspot */}
+            <div
+              role="button"
+              tabIndex={0}
+              aria-pressed={selected}
+              aria-label={spot.area}
               onClick={() => onToggle(spot.area)}
+              onKeyDown={e => (e.key === "Enter" || e.key === " ") && onToggle(spot.area)}
               data-testid={`spot-${spot.area.toLowerCase().replace(/[\s/()]+/g, "-")}`}
+              style={{
+                position: "absolute",
+                top: spot.top,
+                left: spot.left,
+                width: spot.w,
+                height: spot.h,
+                cursor: "pointer",
+                borderRadius: "4px",
+              }}
             />
-            {/* Pain indicator */}
-            {(selected || auto) && (
-              <circle
-                cx={spot.cx}
-                cy={spot.cy}
-                r={12}
-                fill={selected ? "url(#painGradient)" : "url(#autoGradient)"}
-                className={selected ? "pain-spot" : ""}
-              />
-            )}
-            {/* Label when selected */}
+            {/* Pain pulse indicator -- centered at hotspot midpoint via negative margin */}
             {selected && (
-              <text
-                x={spot.cx}
-                y={spot.cy + 22}
-                textAnchor="middle"
-                fontSize="7"
-                fill="#ef4444"
-                fontWeight="600"
-                style={{ pointerEvents: "none" }}
+              <div
+                style={{
+                  position: "absolute",
+                  top: centerTop,
+                  left: centerLeft,
+                  marginLeft: "-20px",
+                  marginTop: "-20px",
+                  width: "40px",
+                  height: "40px",
+                  background: "radial-gradient(circle, rgba(239,68,68,0.7) 0%, rgba(239,68,68,0.3) 40%, transparent 70%)",
+                  animation: "painPulse 1.8s ease-in-out infinite",
+                  borderRadius: "50%",
+                  pointerEvents: "none",
+                }}
               >
-                {spot.area}
-              </text>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: "7px",
+                    color: "#ef4444",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    textAlign: "center",
+                    marginTop: "42px",
+                    textShadow: "0 0 3px white",
+                    pointerEvents: "none",
+                  }}
+                >
+                  {spot.area}
+                </span>
+              </div>
             )}
-          </g>
+          </React.Fragment>
         );
       })}
-    </svg>
+    </div>
   );
 }
 
@@ -1802,13 +1745,11 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
         </button>
       </div>
 
-      {/* Modern line-art body diagram */}
+      {/* Image-based body diagram with CSS hotspots */}
       <div className="flex justify-center mb-4" data-testid="body-diagram-container">
-        <BodySilhouetteSVG
+        <BodyDiagramImage
           view={bodyView}
-          gender={data.gender}
           selectedAreas={data.painAreas}
-          autoSuggestedAreas={data.autoSuggestedPain}
           onToggle={togglePain}
         />
       </div>

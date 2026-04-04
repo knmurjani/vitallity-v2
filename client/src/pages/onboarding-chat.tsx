@@ -612,6 +612,9 @@ export default function OnboardingChat() {
         messages: updatedApiMessages,
         currentData,
       });
+      if (!res.ok) {
+        throw new Error(`API error ${res.status}`);
+      }
       const json: AIChatResponse = await res.json();
 
       // Merge extracted data
@@ -1156,7 +1159,7 @@ export default function OnboardingChat() {
               onClick={() => handleSend()}
               disabled={isLoading || !inputText.trim()}
               className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white disabled:opacity-40 transition-opacity shrink-0"
-              data-testid="send-btn"
+              data-testid="chat-send"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
