@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuthFetch } from "@/hooks/use-auth";
-import { ArrowUp, X, Check, Plus, MessageSquare, ChevronLeft, Sparkles } from "lucide-react";
+import { ArrowUp, X, Check, Plus, MessageSquare, ChevronLeft, Sparkles, Target, Dumbbell, Moon, Brain, Heart, Activity } from "lucide-react";
 
 interface ChatMessage {
   id?: number;
@@ -16,7 +16,61 @@ interface ChatSheetProps {
   isOpen: boolean;
   onClose: () => void;
   initialMessage?: string;
+  initialGoalType?: string;
 }
+
+interface GoalThread {
+  goalType: string;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+}
+
+const GOAL_THREAD_MAP: Record<string, GoalThread> = {
+  "Lose Weight": {
+    goalType: "Lose Weight",
+    label: "Weight Loss Coach",
+    description: "Personalized advice on nutrition, TDEE, and fat loss",
+    icon: Target,
+    color: "text-[hsl(var(--rose))]",
+  },
+  "Build Muscle": {
+    goalType: "Build Muscle",
+    label: "Strength Coach",
+    description: "Training plans, protein targets, and recovery",
+    icon: Dumbbell,
+    color: "text-[hsl(var(--accent))]",
+  },
+  "Improve Fitness": {
+    goalType: "Improve Fitness",
+    label: "Fitness Coach",
+    description: "Cardio, endurance, and overall performance",
+    icon: Activity,
+    color: "text-primary",
+  },
+  "Better Sleep": {
+    goalType: "Better Sleep",
+    label: "Sleep Coach",
+    description: "Sleep quality, habits, and recovery patterns",
+    icon: Moon,
+    color: "text-[hsl(var(--slate))]",
+  },
+  "Reduce Stress": {
+    goalType: "Reduce Stress",
+    label: "Stress Coach",
+    description: "Mindfulness, stress triggers, and mental resilience",
+    icon: Brain,
+    color: "text-[hsl(var(--violet))]",
+  },
+  "Manage Condition": {
+    goalType: "Manage Condition",
+    label: "Health Coach",
+    description: "Managing chronic conditions with evidence-based guidance",
+    icon: Heart,
+    color: "text-[hsl(var(--rose))]",
+  },
+};
 
 interface ThreadItem {
   date: string;
@@ -24,7 +78,7 @@ interface ThreadItem {
   lastMessage: string;
 }
 
-export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheetProps) {
+export default function ChatSheet({ isOpen, onClose, initialMessage, initialGoalType }: ChatSheetProps) {
   const authFetch = useAuthFetch();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -32,9 +86,11 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
   const [initialSent, setInitialSent] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [view, setView] = useState<"threads" | "chat">("threads");
+  const [view, setView] = useState<"threads" | "new-thread" | "chat">("threads");
   const [threads, setThreads] = useState<ThreadItem[]>([]);
   const [activeDate, setActiveDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [activeGoalType, setActiveGoalType] = useState<string | undefined>(initialGoalType);
+  const [userGoals, setUserGoals] = useState<string[]>([]);
 
   // Load threads when opened
   useEffect(() => {
@@ -43,12 +99,21 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
       .then((r) => r.json())
       .then((data) => setThreads(data.threads || []))
       .catch(() => {});
-    // If there's an initial message, go straight to chat
-    if (initialMessage) {
+    // Load user goals for thread selection
+    authFetch("GET", "/api/dashboard")
+      .then((r) => r.json())
+      .then((data) => {
+        const goals = (data.goals || []).map((g: any) => g.goalType as string);
+        setUserGoals(goals);
+      })
+      .catch(() => {});
+    // If there's an initial message or goalType, go straight to chat
+    if (initialMessage || initialGoalType) {
       setView("chat");
       setActiveDate(new Date().toISOString().split("T")[0]);
+      if (initialGoalType) setActiveGoalType(initialGoalType);
     }
-  }, [isOpen, authFetch, initialMessage]);
+  }, [isOpen, authFetch, initialMessage, initialGoalType]);
 
   // Load messages for active date
   useEffect(() => {
@@ -77,7 +142,20 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
   };
 
   const startNewThread = () => {
+    // Show goal thread selection screen
+    setView("new-thread");
+  };
+
+  const startGeneralThread = () => {
     setActiveDate(new Date().toISOString().split("T")[0]);
+    setActiveGoalType(undefined);
+    setMessages([]);
+    setView("chat");
+  };
+
+  const startGoalThread = (goalType: string) => {
+    setActiveDate(new Date().toISOString().split("T")[0]);
+    setActiveGoalType(goalType);
     setMessages([]);
     setView("chat");
   };
@@ -102,6 +180,7 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
     } else {
       setInitialSent(false);
       setView("threads");
+      setActiveGoalType(undefined);
     }
   }, [isOpen, view]);
 
@@ -114,7 +193,9 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
     setLoading(true);
 
     try {
-      const res = await authFetch("POST", "/api/chat/message", { message: text.trim() });
+      const body: Record<string, unknown> = { message: text.trim() };
+      if (activeGoalType) body.goalType = activeGoalType;
+      const res = await authFetch("POST", "/api/chat/message", body);
       const data = await res.json();
       const aiMsg: ChatMessage = {
         role: "assistant",
@@ -131,7 +212,7 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
     } finally {
       setLoading(false);
     }
-  }, [loading, authFetch]);
+  }, [loading, authFetch, activeGoalType]);
 
   const confirmFoodLog = useCallback(async (msgIndex: number, items: any[]) => {
     try {
@@ -179,7 +260,7 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
             <div className="w-10 h-1 rounded-full bg-white/20 mb-3" />
             <div className="w-full flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {view === "chat" && (
+                {(view === "chat" || view === "new-thread") && (
                   <button
                     onClick={() => setView("threads")}
                     className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
@@ -191,7 +272,7 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-emerald-300" />
                   <h2 className="font-display text-lg font-bold text-white">
-                    {view === "threads" ? "Conversations" : "Vitallity AI"}
+                    {view === "threads" ? "Conversations" : view === "new-thread" ? "New Conversation" : activeGoalType ? GOAL_THREAD_MAP[activeGoalType]?.label ?? "Vitallity AI" : "Vitallity AI"}
                   </h2>
                 </div>
               </div>
@@ -204,6 +285,54 @@ export default function ChatSheet({ isOpen, onClose, initialMessage }: ChatSheet
               </button>
             </div>
           </div>
+
+          {/* Goal Thread Selection View */}
+          {view === "new-thread" && (
+            <div className="flex-1 overflow-y-auto">
+              <p className="px-4 pt-4 pb-2 text-xs text-muted-foreground">Choose a conversation type</p>
+              {/* General */}
+              <button
+                onClick={startGeneralThread}
+                className="w-full px-4 py-3.5 flex items-center gap-3 border-b border-border/50 hover:bg-primary/5 transition-colors"
+                data-testid="goal-thread-general"
+              >
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-semibold text-foreground">General</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Free conversation about anything health-related</p>
+                </div>
+              </button>
+              {/* Goal threads */}
+              {userGoals.map(goalType => {
+                const thread = GOAL_THREAD_MAP[goalType];
+                if (!thread) return null;
+                const Icon = thread.icon;
+                return (
+                  <button
+                    key={goalType}
+                    onClick={() => startGoalThread(goalType)}
+                    className="w-full px-4 py-3.5 flex items-center gap-3 border-b border-border/50 hover:bg-muted/50 transition-colors"
+                    data-testid={`goal-thread-${goalType}`}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <Icon className={`w-4 h-4 ${thread.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-semibold text-foreground">{thread.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{thread.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+              {userGoals.length === 0 && (
+                <div className="px-4 py-4">
+                  <p className="text-xs text-muted-foreground">Set goals in Settings to unlock goal-specific coaching threads</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Thread List View */}
           {view === "threads" && (

@@ -3,10 +3,11 @@ import { useAuth, useAuthFetch } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { RangeSlider } from "@/components/ui/range-slider";
 import { useBadgeNotifications } from "@/contexts/badge-context";
+import { searchFoods, type FoodItem } from "@shared/foods";
 import {
   ArrowLeft, Save, Loader2, ChevronLeft, ChevronRight,
   Droplets, Footprints, Dumbbell, Pill, Moon, Brain,
-  Heart, Zap, AlertTriangle, Camera, X,
+  Heart, Zap, AlertTriangle, Camera, X, Search,
 } from "lucide-react";
 
 function formatDateISO(date: Date): string {
@@ -20,6 +21,11 @@ function formatDateDisplay(dateStr: string): string {
 
 function isToday(dateStr: string): boolean {
   return dateStr === formatDateISO(new Date());
+}
+
+interface SelectedFood {
+  food: FoodItem;
+  qty: number;
 }
 
 interface DailyLogData {
@@ -77,6 +83,80 @@ export default function DailyLog() {
   const [history, setHistory] = useState<any[]>([]);
   const [mealPhotoLoading, setMealPhotoLoading] = useState(false);
   const mealPhotoRef = useRef<HTMLInputElement>(null);
+
+  // Food search state
+  const [foodQuery, setFoodQuery] = useState("");
+  const [foodResults, setFoodResults] = useState<FoodItem[]>([]);
+  const [showFoodDropdown, setShowFoodDropdown] = useState(false);
+  const [selectedFoods, setSelectedFoods] = useState<SelectedFood[]>([]);
+  const foodSearchRef = useRef<HTMLDivElement>(null);
+
+  // Compute food totals from selected foods
+  const foodTotals = useMemo(() => {
+    return selectedFoods.reduce(
+      (acc, sf) => ({
+        calories: acc.calories + sf.food.caloriesPer * sf.qty,
+        protein: acc.protein + sf.food.proteinPer * sf.qty,
+        carbs: acc.carbs + sf.food.carbsPer * sf.qty,
+        fat: acc.fat + sf.food.fatPer * sf.qty,
+      }),
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+  }, [selectedFoods]);
+
+  // Search foods locally (client-side using shared DB)
+  useEffect(() => {
+    if (!foodQuery.trim()) {
+      setFoodResults([]);
+      setShowFoodDropdown(false);
+      return;
+    }
+    const results = searchFoods(foodQuery, 6);
+    setFoodResults(results);
+    setShowFoodDropdown(results.length > 0);
+  }, [foodQuery]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (foodSearchRef.current && !foodSearchRef.current.contains(e.target as Node)) {
+        setShowFoodDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const selectFood = (food: FoodItem) => {
+    setSelectedFoods(prev => {
+      const existing = prev.findIndex(sf => sf.food.name === food.name);
+      if (existing >= 0) {
+        const updated = [...prev];
+        updated[existing] = { ...updated[existing], qty: updated[existing].qty + food.defaultQty };
+        return updated;
+      }
+      return [...prev, { food, qty: food.defaultQty }];
+    });
+    setFoodQuery("");
+    setShowFoodDropdown(false);
+    // Apply totals to form fields
+  };
+
+  const removeFood = (name: string) => {
+    setSelectedFoods(prev => prev.filter(sf => sf.food.name !== name));
+  };
+
+  // Sync food totals -> data fields whenever selectedFoods changes
+  useEffect(() => {
+    if (selectedFoods.length === 0) return;
+    setData(prev => ({
+      ...prev,
+      calories: Math.round(foodTotals.calories) || prev.calories,
+      protein: Math.round(foodTotals.protein) || prev.protein,
+      carbs: Math.round(foodTotals.carbs) || prev.carbs,
+      fat: Math.round(foodTotals.fat) || prev.fat,
+    }));
+  }, [foodTotals, selectedFoods.length]);
 
   const handleMealPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -279,6 +359,87 @@ export default function DailyLog() {
                     {mealPhotoLoading ? "Analyzing..." : "Snap Meal"}
                   </button>
                 </div>
+              </div>
+
+              {/* Food Search */}
+              <div className="mb-4 relative" ref={foodSearchRef}>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Search className="w-4 h-4 text-text-light" />
+                  </div>
+                  <input
+                    type="text"
+                    value={foodQuery}
+                    onChange={e => setFoodQuery(e.target.value)}
+                    onFocus={() => foodResults.length > 0 && setShowFoodDropdown(true)}
+                    placeholder="Search foods..."
+                    className="vitallity-input pl-9"
+                    data-testid="food-search-input"
+                  />
+                </div>
+
+                {/* Dropdown results */}
+                {showFoodDropdown && (
+                  <div className="absolute z-20 mt-1 left-0 right-0 bg-card rounded-xl shadow-xl border border-border overflow-hidden">
+                    {foodResults.slice(0, 6).map(food => (
+                      <button
+                        key={food.name}
+                        type="button"
+                        onClick={() => selectFood(food)}
+                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-primary/5 transition-colors text-left border-b border-border/50 last:border-0"
+                        data-testid={`food-result-${food.name}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{food.name}</p>
+                          <p className="text-[11px] text-text-light mt-0.5">
+                            {food.defaultQty} {food.unit} &middot; P:{food.proteinPer}g C:{food.carbsPer}g F:{food.fatPer}g
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold text-primary ml-3 shrink-0">{food.caloriesPer} cal</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Selected food chips */}
+                {selectedFoods.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedFoods.map(sf => (
+                      <div
+                        key={sf.food.name}
+                        className="flex items-center gap-1.5 bg-primary/10 rounded-full px-2.5 py-1 text-xs font-medium text-primary"
+                        data-testid={`food-chip-${sf.food.name}`}
+                      >
+                        <span>{sf.food.name} x{sf.qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeFood(sf.food.name)}
+                          className="w-3.5 h-3.5 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30 transition-colors"
+                          aria-label={`Remove ${sf.food.name}`}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Totals summary row */}
+                {selectedFoods.length > 0 && (
+                  <div className="mt-2 flex items-center gap-3 bg-primary/5 rounded-xl px-3 py-2">
+                    <span className="text-xs font-semibold text-primary">{Math.round(foodTotals.calories)} cal</span>
+                    <span className="text-[11px] text-text-mid">P:{Math.round(foodTotals.protein)}g</span>
+                    <span className="text-[11px] text-text-mid">C:{Math.round(foodTotals.carbs)}g</span>
+                    <span className="text-[11px] text-text-mid">F:{Math.round(foodTotals.fat)}g</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFoods([])}
+                      className="ml-auto text-[11px] text-text-light hover:text-foreground"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">

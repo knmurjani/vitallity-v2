@@ -63,9 +63,32 @@ interface NotifPrefs {
   maxPerDay: number;
 }
 
+interface NotifConfig {
+  reminderHour: number;  // 1-12
+  reminderAmPm: "AM" | "PM";
+  reminderMethod: "telegram" | "email" | "none";
+  reminderFrequency: "daily" | "weekdays" | "custom";
+  customDays: number[]; // 0=Sun, 1=Mon ... 6=Sat
+}
+
+interface CalibrationAdjustment {
+  disciplineGap: number;
+  consistencyGap: number;
+  sleepGap: number;
+  tone: "encouraging" | "calibrating" | "celebrating";
+  message: string;
+  claimedDiscipline: number | null;
+  actualLogFrequency: number;
+  claimedConsistency: number | null;
+  actualStreak: number;
+  claimedSleepHours: number | null;
+  actualAvgSleep: number | null;
+}
+
 interface CalibrationData {
   snapshot: any;
   gaps: { type: string; message: string; statedScore: number; actualMetric: number }[];
+  calibrationAdjustment: CalibrationAdjustment | null;
 }
 
 const DEFAULT_NOTIF: NotifPrefs = {
@@ -111,6 +134,15 @@ export default function Settings() {
   // Notifications
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(DEFAULT_NOTIF);
   const [savingNotif, setSavingNotif] = useState(false);
+  const [notifConfig, setNotifConfig] = useState<NotifConfig>({
+    reminderHour: 8,
+    reminderAmPm: "AM",
+    reminderMethod: "email",
+    reminderFrequency: "daily",
+    customDays: [1, 2, 3, 4, 5],
+  });
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [configSaved, setConfigSaved] = useState(false);
 
   // Calibration
   const [calibration, setCalibration] = useState<CalibrationData | null>(null);
@@ -311,6 +343,17 @@ export default function Settings() {
       await fetchNotifs();
     } catch {} finally {
       setSavingNotif(false);
+    }
+  };
+
+  const saveNotifConfig = async () => {
+    setSavingConfig(true);
+    try {
+      await authFetch("POST", "/api/settings/notifications", notifConfig);
+      setConfigSaved(true);
+      setTimeout(() => setConfigSaved(false), 2000);
+    } catch {} finally {
+      setSavingConfig(false);
     }
   };
 
@@ -713,8 +756,107 @@ export default function Settings() {
             {expandedSection === "calibration" ? <ChevronUp className="w-4 h-4 text-text-mid" /> : <ChevronDown className="w-4 h-4 text-text-mid" />}
           </button>
           {expandedSection === "calibration" && (
-            <div className="px-4 pb-4 border-t border-border pt-3">
-              <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="px-4 pb-4 border-t border-border pt-3 space-y-4">
+
+              {/* Self-assessment vs reality comparison bars */}
+              {calibration?.calibrationAdjustment && (
+                <div>
+                  <p className="text-xs font-semibold text-foreground mb-3">Your self-assessment vs reality</p>
+                  <div className="space-y-3">
+
+                    {/* Discipline bar */}
+                    {calibration.calibrationAdjustment.claimedDiscipline !== null && (
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs text-text-mid">Discipline</span>
+                          <div className="flex items-center gap-3 text-[11px]">
+                            <span className="text-text-mid">Claimed <span className="font-semibold text-foreground">{calibration.calibrationAdjustment.claimedDiscipline}/10</span></span>
+                            <span className="text-text-mid">Actual <span className="font-semibold text-foreground">{calibration.calibrationAdjustment.actualLogFrequency}%</span> logged</span>
+                          </div>
+                        </div>
+                        <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="absolute left-0 top-0 h-full rounded-full bg-[hsl(var(--accent))]/40"
+                            style={{ width: `${(calibration.calibrationAdjustment.claimedDiscipline / 10) * 100}%` }}
+                          />
+                          <div
+                            className="absolute left-0 top-0 h-full rounded-full bg-[hsl(var(--accent))]"
+                            style={{ width: `${Math.min(100, calibration.calibrationAdjustment.actualLogFrequency)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Consistency bar */}
+                    {calibration.calibrationAdjustment.claimedConsistency !== null && (
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs text-text-mid">Consistency</span>
+                          <div className="flex items-center gap-3 text-[11px]">
+                            <span className="text-text-mid">Claimed <span className="font-semibold text-foreground">{calibration.calibrationAdjustment.claimedConsistency}/10</span></span>
+                            <span className="text-text-mid">Actual <span className="font-semibold text-foreground">{calibration.calibrationAdjustment.actualStreak} day streak</span></span>
+                          </div>
+                        </div>
+                        <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="absolute left-0 top-0 h-full rounded-full bg-primary/40"
+                            style={{ width: `${(calibration.calibrationAdjustment.claimedConsistency / 10) * 100}%` }}
+                          />
+                          <div
+                            className="absolute left-0 top-0 h-full rounded-full bg-primary"
+                            style={{ width: `${Math.min(100, (calibration.calibrationAdjustment.actualStreak / 14) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sleep bar */}
+                    {calibration.calibrationAdjustment.claimedSleepHours !== null && calibration.calibrationAdjustment.actualAvgSleep !== null && (
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs text-text-mid">Sleep</span>
+                          <div className="flex items-center gap-3 text-[11px]">
+                            <span className="text-text-mid">Claimed <span className="font-semibold text-foreground">{calibration.calibrationAdjustment.claimedSleepHours} hrs</span></span>
+                            <span className="text-text-mid">Actual <span className="font-semibold text-foreground">{calibration.calibrationAdjustment.actualAvgSleep} hrs</span></span>
+                          </div>
+                        </div>
+                        <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="absolute left-0 top-0 h-full rounded-full bg-[hsl(var(--slate))]/40"
+                            style={{ width: `${Math.min(100, (calibration.calibrationAdjustment.claimedSleepHours / 10) * 100)}%` }}
+                          />
+                          <div
+                            className="absolute left-0 top-0 h-full rounded-full bg-[hsl(var(--slate))]"
+                            style={{ width: `${Math.min(100, (calibration.calibrationAdjustment.actualAvgSleep / 10) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* Calibration tone message */}
+                  <div className={`mt-3 rounded-lg px-3 py-2.5 text-xs ${
+                    calibration.calibrationAdjustment.tone === "celebrating"
+                      ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                      : calibration.calibrationAdjustment.tone === "encouraging"
+                      ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                      : "bg-[hsl(var(--slate))]/10 text-foreground"
+                  }`}>
+                    <p className="font-semibold mb-0.5">
+                      {calibration.calibrationAdjustment.tone === "celebrating"
+                        ? "You are doing better than you expected"
+                        : calibration.calibrationAdjustment.tone === "encouraging"
+                        ? "Let's recalibrate"
+                        : "Your estimates were close to reality"}
+                    </p>
+                    <p className="leading-relaxed">{calibration.calibrationAdjustment.message}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing knowledge self-assessment bars */}
+              <div className="grid grid-cols-2 gap-3">
                 {profile?.nutritionKnowledge != null && (
                   <div>
                     <p className="text-text-mid text-xs">Nutrition Knowledge</p>
@@ -760,8 +902,10 @@ export default function Settings() {
                   </div>
                 )}
               </div>
+
+              {/* Detected behavioral gaps */}
               {calibration?.gaps && calibration.gaps.length > 0 && (
-                <div className="space-y-2 mt-3">
+                <div className="space-y-2">
                   <p className="text-xs font-semibold text-foreground">Detected Gaps</p>
                   {calibration.gaps.map((gap, i) => (
                     <div key={i} className="bg-[hsl(var(--violet))]/5 rounded-lg px-3 py-2">
@@ -771,8 +915,10 @@ export default function Settings() {
                   ))}
                 </div>
               )}
+
+              {/* 14-day metrics summary */}
               {calibration?.snapshot && (
-                <div className="mt-3 pt-3 border-t border-border">
+                <div className="pt-3 border-t border-border">
                   <p className="text-xs font-semibold text-foreground mb-2">14-Day Metrics</p>
                   <div className="grid grid-cols-2 gap-2">
                     {calibration.snapshot.foodLoggingPct != null && (
@@ -798,6 +944,7 @@ export default function Settings() {
                   </div>
                 </div>
               )}
+
             </div>
           )}
         </div>
@@ -868,6 +1015,126 @@ export default function Settings() {
               <button onClick={saveNotifPrefs} disabled={savingNotif} className="vitallity-btn-primary w-full text-sm py-2 disabled:opacity-50" aria-label="Save notification preferences">
                 {savingNotif ? "Saving..." : "Save Preferences"}
               </button>
+
+              {/* Daily Reminder Config */}
+              <div className="border-t border-border/50 pt-3 mt-1 space-y-3">
+                <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Daily Check-in Reminder</p>
+
+                {/* Time picker */}
+                <div>
+                  <p className="vitallity-label mb-1.5">Reminder Time</p>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={notifConfig.reminderHour}
+                      onChange={e => setNotifConfig(p => ({ ...p, reminderHour: parseInt(e.target.value) }))}
+                      className="vitallity-input w-20 text-center"
+                      aria-label="Reminder hour"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                    <div className="flex rounded-xl overflow-hidden border border-border">
+                      {(["AM", "PM"] as const).map(period => (
+                        <button
+                          key={period}
+                          type="button"
+                          onClick={() => setNotifConfig(p => ({ ...p, reminderAmPm: period }))}
+                          className={`px-3 py-2 text-xs font-semibold transition-colors ${
+                            notifConfig.reminderAmPm === period
+                              ? "bg-primary text-white"
+                              : "text-text-mid hover:bg-muted"
+                          }`}
+                        >
+                          {period}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reminder method */}
+                <div>
+                  <p className="vitallity-label mb-1.5">Reminder Method</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {([
+                      { value: "telegram", label: "Telegram", available: telegramStatus?.linked },
+                      { value: "email", label: "Email", available: true },
+                      { value: "none", label: "None", available: true },
+                    ] as const).map(opt => (
+                      opt.available !== false && (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setNotifConfig(p => ({ ...p, reminderMethod: opt.value }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                            notifConfig.reminderMethod === opt.value
+                              ? "bg-primary text-white border-primary"
+                              : "border-border text-text-mid hover:border-primary/40"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    ))}
+                  </div>
+                </div>
+
+                {/* Frequency */}
+                <div>
+                  <p className="vitallity-label mb-1.5">Frequency</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {(["daily", "weekdays", "custom"] as const).map(freq => (
+                      <button
+                        key={freq}
+                        type="button"
+                        onClick={() => setNotifConfig(p => ({ ...p, reminderFrequency: freq }))}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors capitalize ${
+                          notifConfig.reminderFrequency === freq
+                            ? "bg-primary text-white border-primary"
+                            : "border-border text-text-mid hover:border-primary/40"
+                        }`}
+                      >
+                        {freq === "weekdays" ? "Weekdays only" : freq === "custom" ? "Custom days" : freq}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom day selector */}
+                  {notifConfig.reminderFrequency === "custom" && (
+                    <div className="flex gap-1.5 mt-2">
+                      {["S", "M", "T", "W", "T", "F", "S"].map((label, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setNotifConfig(p => ({
+                            ...p,
+                            customDays: p.customDays.includes(idx)
+                              ? p.customDays.filter(d => d !== idx)
+                              : [...p.customDays, idx].sort(),
+                          }))}
+                          className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
+                            notifConfig.customDays.includes(idx)
+                              ? "bg-primary text-white"
+                              : "bg-muted text-text-mid"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={saveNotifConfig}
+                  disabled={savingConfig}
+                  className="vitallity-btn-primary w-full text-sm py-2 disabled:opacity-50"
+                  aria-label="Save reminder configuration"
+                >
+                  {savingConfig ? "Saving..." : configSaved ? "Saved" : "Save Reminder Config"}
+                </button>
+              </div>
             </div>
           )}
         </div>

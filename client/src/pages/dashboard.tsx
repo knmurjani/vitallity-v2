@@ -137,6 +137,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [data, setData] = useState<DashboardData | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatInitialMessage, setChatInitialMessage] = useState<string | undefined>(undefined);
   const [weeklyReview, setWeeklyReview] = useState<WeeklyReviewData | null>(null);
   const [reviewExpanded, setReviewExpanded] = useState(false);
   const [calibration, setCalibration] = useState<CalibrationData | null>(null);
@@ -287,6 +288,10 @@ export default function Dashboard() {
 
   // Is new user? (0 check-ins)
   const isNewUser = stats.checkInCount === 0;
+
+  // Has the user logged today? Check if today's date appears in recentCheckIns
+  const todayStr = new Date().toISOString().split("T")[0];
+  const hasLoggedToday = recentCheckIns.some((c: any) => c.date === todayStr);
 
   // Quick start: user has 0 goals set (may have used quick start)
   const needsGoals = goals.length === 0 && !isNewUser;
@@ -537,6 +542,27 @@ export default function Dashboard() {
             </div>
           </div>
         ) : null}
+
+        {/* Proactive Check-in Card */}
+        {!hasLoggedToday && !isNewUser && data && (
+          <button
+            onClick={() => {
+              setChatInitialMessage("I'd like to do a quick wellness check-in for today. Please ask me about my mood, energy levels, sleep last night, and any concerns I might have.");
+              setChatOpen(true);
+            }}
+            className="w-full glass-card p-4 text-left flex items-center gap-4 active:scale-[0.99] transition-transform border border-primary/20"
+            data-testid="proactive-checkin-card"
+          >
+            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <MessageCircle className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-display text-sm font-bold text-foreground">How are you feeling today?</p>
+              <p className="text-text-light text-[11px] mt-0.5">Quick wellness check-in with your AI coach</p>
+            </div>
+            <MoveRight className="w-4 h-4 text-text-light shrink-0" />
+          </button>
+        )}
 
         {/* Quick-Log Widgets */}
         <div className="grid grid-cols-4 gap-2" data-testid="quick-log-widgets">
@@ -944,7 +970,11 @@ export default function Dashboard() {
         <MessageCircle className="w-6 h-6" />
       </button>
 
-      <ChatSheet isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+      <ChatSheet
+        isOpen={chatOpen}
+        onClose={() => { setChatOpen(false); setChatInitialMessage(undefined); }}
+        initialMessage={chatInitialMessage}
+      />
     </div>
   );
 }

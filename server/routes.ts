@@ -10,6 +10,7 @@ import { callHaiku } from "./ai/haiku";
 import { callSonnet } from "./ai/sonnet";
 import { callOpus } from "./ai/opus";
 import { getUserContext, buildInsightSystemPrompt, buildChatSystemPrompt, buildMotivationPrompt, buildWeeklyReviewPrompt, buildHealthSummarySystemPrompt } from "./ai/prompts";
+import { getHealthContext, getCalibrationContext, computeCalibrationAdjustment } from "./ai/health-context";
 import { checkAndAwardBadges } from "./badges";
 import { handleTelegramWebhook, isTelegramConfigured, sendReminders } from "./telegram";
 import { isGoogleSheetsConfigured, getAuthUrl, handleOAuthCallback, syncDailyLog, fullSync } from "./google-sheets";
@@ -754,6 +755,29 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/settings/notifications — save notification config preferences
+  app.post("/api/settings/notifications", extractUser, (req: Request, res: Response) => {
+    try {
+      const { reminderHour, reminderAmPm, reminderMethod, reminderFrequency, customDays } = req.body;
+      // Derive a time string (e.g. "08:00") and persist via existing notif prefs storage
+      let hour24 = reminderHour;
+      if (reminderAmPm === "PM" && reminderHour !== 12) hour24 = reminderHour + 12;
+      if (reminderAmPm === "AM" && reminderHour === 12) hour24 = 0;
+      const timeStr = `${String(hour24).padStart(2, "0")}:00`;
+      // Save the morning reminder time as the main daily reminder
+      storage.saveNotificationPrefs(req.user!.id, {
+        morningReminder: reminderMethod !== "none",
+        morningTime: timeStr,
+      });
+      res.json({
+        success: true,
+        config: { reminderHour, reminderAmPm, reminderMethod, reminderFrequency, customDays, timeStr },
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
   // ==================== PHASE 3: AI & CHAT ====================
 
   // Helper: detect illness mode from recent check-ins
@@ -898,8 +922,13 @@ export async function registerRoutes(
   // POST /api/ai/health-summary
   app.post("/api/ai/health-summary", extractUser, async (req: Request, res: Response) => {
     try {
+      const userId = req.user!.id;
       const onboardingData = req.body;
-      const systemPrompt = buildHealthSummarySystemPrompt();
+      let systemPrompt = buildHealthSummarySystemPrompt();
+      const summaryHealthContext = getHealthContext(userId);
+      if (summaryHealthContext) {
+        systemPrompt += `\n\nPreviously recorded health data for this user (use to supplement or cross-reference onboarding information):\n${summaryHealthContext}`;
+      }
       const userMessage = `Please analyze this health intake data and provide a structured health summary:\n${JSON.stringify(onboardingData, null, 2)}`;
 
       const aiResponse = await callSonnet(systemPrompt, [{ role: "user", content: userMessage }]);
@@ -938,11 +967,76 @@ export async function registerRoutes(
     }
   });
 
+  // Helper: build goal-specific context block for chat system prompt
+  function buildGoalContext(userId: number, goalType: string): string {
+    const ctx = getUserContext(userId);
+    const profile = ctx.profile;
+    const recentCheckIns = ctx.recentCheckIns;
+
+    let block = `\n\n## Goal-Specific Context: ${goalType}\n`;
+
+    if (goalType === "Lose Weight") {
+      const currentWeight = profile?.weightKg;
+      const targetWeight = profile?.targetWeightKg;
+      const heightCm = profile?.heightCm;
+      let tdee = "unknown";
+      if (profile?.activityLevel && currentWeight && heightCm && profile?.age && profile?.gender) {
+        const bmr = profile.gender === "male"
+          ? 10 * currentWeight + 6.25 * heightCm - 5 * profile.age + 5
+          : 10 * currentWeight + 6.25 * heightCm - 5 * profile.age - 161;
+        const multipliers: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryActive: 1.9 };
+        const mult = multipliers[profile.activityLevel] || 1.375;
+        tdee = Math.round(bmr * mult).toString();
+      }
+      block += `Current weight: ${currentWeight ? currentWeight + "kg" : "not set"}\n`;
+      block += `Target weight: ${targetWeight ? targetWeight + "kg" : "not set"}\n`;
+      block += `Estimated TDEE: ${tdee} kcal/day\n`;
+      const recentCalories = recentCheckIns.filter(c => c.totalCalories).slice(0, 5);
+      if (recentCalories.length > 0) {
+        const avg = Math.round(recentCalories.reduce((s, c) => s + (c.totalCalories || 0), 0) / recentCalories.length);
+        block += `Recent avg daily calories: ${avg} kcal\n`;
+      }
+      block += `Focus: nutrition tracking, calorie deficit, meal planning, TDEE awareness.\n`;
+    } else if (goalType === "Build Muscle") {
+      const recentExercise = recentCheckIns.filter(c => c.exerciseDuration && c.exerciseDuration > 0).slice(0, 7);
+      block += `Recent exercise sessions: ${recentExercise.length} in last 7 days\n`;
+      const avgDuration = recentExercise.length > 0
+        ? Math.round(recentExercise.reduce((s, c) => s + (c.exerciseDuration || 0), 0) / recentExercise.length)
+        : 0;
+      if (avgDuration > 0) block += `Avg session duration: ${avgDuration} min\n`;
+      block += `Focus: progressive overload, protein intake, recovery, training consistency.\n`;
+    } else if (goalType === "Better Sleep") {
+      const recentSleep = recentCheckIns.filter(c => c.sleepQuality).slice(0, 7);
+      if (recentSleep.length > 0) {
+        const avgQuality = (recentSleep.reduce((s, c) => s + (c.sleepQuality || 0), 0) / recentSleep.length).toFixed(1);
+        block += `Avg sleep quality (last 7 days): ${avgQuality}/10\n`;
+      }
+      block += `Focus: sleep hygiene, bedtime routines, sleep quality improvement.\n`;
+    } else if (goalType === "Reduce Stress") {
+      const recentStress = recentCheckIns.filter(c => c.stress).slice(0, 7);
+      if (recentStress.length > 0) {
+        const avgStress = (recentStress.reduce((s, c) => s + (c.stress || 0), 0) / recentStress.length).toFixed(1);
+        block += `Avg stress level (last 7 days): ${avgStress}/10\n`;
+      }
+      block += `Focus: stress management, mindfulness, lifestyle adjustments, identifying triggers.\n`;
+    } else if (goalType === "Improve Fitness") {
+      block += `Focus: cardiovascular fitness, endurance, stamina improvement, activity variety.\n`;
+    } else if (goalType === "Manage Condition") {
+      const conditions = storage.getConditions(userId);
+      if (conditions.length > 0) {
+        block += `Conditions: ${conditions.map(c => c.conditionName).join(", ")}\n`;
+      }
+      block += `Focus: evidence-based management of health conditions, medication adherence, symptom tracking.\n`;
+    }
+
+    return block;
+  }
+
   // POST /api/chat/message
   app.post("/api/chat/message", extractUser, async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
-      const { message, entryPoint, entryContext } = req.body;
+      const { message, entryPoint, entryContext, goalType } = req.body;
       const today = new Date().toISOString().split("T")[0];
 
       const ctx = getUserContext(userId);
@@ -957,7 +1051,16 @@ export async function registerRoutes(
       chatHistory.push({ role: "user", content: message });
 
       // Build system prompt
-      const systemPrompt = buildChatSystemPrompt(ctx, travelMode, illnessMode, illnessDetails);
+      const healthContext = getHealthContext(userId);
+      const calibrationContext = getCalibrationContext(userId);
+      let systemPrompt = buildChatSystemPrompt(ctx, travelMode, illnessMode, illnessDetails);
+      if (healthContext) systemPrompt += `\n\n${healthContext}`;
+      if (calibrationContext) systemPrompt += `\n\n${calibrationContext}`;
+      // Add goal-specific context if goalType is set
+      if (goalType) {
+        systemPrompt += buildGoalContext(userId, goalType);
+        systemPrompt += `\n\nYou are acting as a specialized ${goalType} coach in this conversation. Stay focused on this goal area while remaining aware of the user's overall health context.`;
+      }
 
       // Call Sonnet
       const aiResponse = await callSonnet(systemPrompt, chatHistory);
@@ -1261,14 +1364,16 @@ export async function registerRoutes(
   // GET /api/calibration
   app.get("/api/calibration", extractUser, (req: Request, res: Response) => {
     try {
-      const snapshot = storage.getLatestCalibration(req.user!.id);
+      const userId = req.user!.id;
+      const snapshot = storage.getLatestCalibration(userId);
+      const calibrationAdjustment = computeCalibrationAdjustment(userId);
       if (!snapshot) {
-        res.json({ snapshot: null, gaps: [] });
+        res.json({ snapshot: null, gaps: [], calibrationAdjustment });
         return;
       }
       let gaps: any[] = [];
       try { gaps = JSON.parse(snapshot.gapsJson || "[]"); } catch {}
-      res.json({ snapshot, gaps });
+      res.json({ snapshot, gaps, calibrationAdjustment });
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Server error" });
     }
@@ -1285,7 +1390,7 @@ export async function registerRoutes(
 
       const total = recentCheckIns.length;
       if (total === 0) {
-        res.json({ snapshot: null, gaps: [], message: "Not enough data yet" });
+        res.json({ snapshot: null, gaps: [], message: "Not enough data yet", calibrationAdjustment: null });
         return;
       }
 
@@ -1313,7 +1418,7 @@ export async function registerRoutes(
       const withinTarget = withFoodCIs.filter(ci => Math.abs((ci.totalCalories || 0) - calTarget) <= 200).length;
       const calorieAccuracyPct = withFoodCIs.length > 0 ? Math.round((withinTarget / withFoodCIs.length) * 100) : 0;
 
-      // Gap detection
+      // Gap detection (knowledge vs behavior gaps)
       const gaps: { type: string; message: string; statedScore: number; actualMetric: number }[] = [];
       const nk = profile?.nutritionKnowledge || 0;
       const ek = profile?.exerciseKnowledge || 0;
@@ -1333,6 +1438,9 @@ export async function registerRoutes(
         gaps.push({ type: "consistency_gap", message: "Consistency is a skill that grows over time. Your check-in streak can be rebuilt.", statedScore: ch, actualMetric: checkinConsistencyPct });
       }
 
+      // Calibration adjustment: claimed self-assessment vs actual behavior
+      const calibrationAdjustment = computeCalibrationAdjustment(userId);
+
       const snapshot = storage.saveCalibrationSnapshot(userId, {
         foodLoggingPct,
         exerciseAdherencePct,
@@ -1341,7 +1449,7 @@ export async function registerRoutes(
         gapsJson: JSON.stringify(gaps),
       });
 
-      res.json({ snapshot, gaps });
+      res.json({ snapshot, gaps, calibrationAdjustment });
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Server error" });
     }
@@ -1848,7 +1956,9 @@ export async function registerRoutes(
         profile: profile ? { name: profile.name, age: profile.age, targetWeightKg: profile.targetWeightKg } : null,
       });
 
-      const systemPrompt = `You are a warm, concise wellness coach. Generate a morning briefing card.
+      const briefingHealthContext = getHealthContext(userId);
+      const briefingCalibrationContext = getCalibrationContext(userId);
+      let systemPrompt = `You are a warm, concise wellness coach. Generate a morning briefing card.
 Return ONLY valid JSON with this exact structure:
 {
   "greeting": "${greeting}, ${name}",
@@ -1856,6 +1966,8 @@ Return ONLY valid JSON with this exact structure:
   "focus": "Today's focus suggestion"
 }
 Keep each insight under 50 characters. Focus should be under 40 characters. Be encouraging but honest about areas to improve. Do not use emoji.`;
+      if (briefingHealthContext) systemPrompt += `\n\n${briefingHealthContext}`;
+      if (briefingCalibrationContext) systemPrompt += `\n\n${briefingCalibrationContext}`;
 
       const response = await callHaiku(systemPrompt, `User's recent data: ${dataContext}`);
       const briefing = JSON.parse(response);
