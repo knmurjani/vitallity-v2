@@ -827,7 +827,7 @@ export class DatabaseStorage implements IStorage {
     const profile = this.getProfile(userId);
     const goals = this.getGoals(userId);
     const milestonesData = this.getMilestones(userId);
-    const recentCheckIns = this.getCheckInsByUser(userId, 5);
+    const recentCheckIns = this.getCheckInsByUser(userId, 14);
     const conditions = this.getConditions(userId);
     const medications = this.getMedications(userId);
 

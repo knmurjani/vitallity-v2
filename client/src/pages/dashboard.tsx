@@ -48,6 +48,7 @@ import {
   AreaChart,
   Area,
   ReferenceLine,
+  Legend,
 } from "recharts";
 
 const LEVELS = [
@@ -692,7 +693,76 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* C. Weekly Macro Summary */}
+        {/* C. 14-Day Wellness Trends */}
+        {(() => {
+          const trendData = recentCheckIns
+            .filter((c: any) => c.date && (c.mood || c.energyLevel || c.sleepQuality || c.stressLevel || c.painLevel))
+            .reverse()
+            .map((c: any) => ({
+              date: c.date ? c.date.slice(5) : "",
+              Mood: c.mood || null,
+              Energy: c.energyLevel || null,
+              Sleep: c.sleepQuality || null,
+              Stress: c.stressLevel || null,
+              Pain: c.painLevel || null,
+            }));
+          const hasData = trendData.length >= 2;
+          return (
+            <div className="vitallity-card" data-testid="wellness-trends-card">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Wellness Trends (14 Days)</p>
+              </div>
+              <p className="text-[11px] text-gray-400 mb-3">Sleep, mood, energy, stress, and pain scores over time</p>
+              {hasData ? (
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 0, left: -28 }}>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: "#9CA3AF" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[0, 10]}
+                      tick={{ fontSize: 10, fill: "#9CA3AF" }}
+                      axisLine={false}
+                      tickLine={false}
+                      ticks={[0, 5, 10]}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "white",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: 12,
+                        fontSize: 12,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                      }}
+                      formatter={(val: number, name: string) => [val ? `${val}/10` : "--", name]}
+                    />
+                    <Legend
+                      iconType="circle"
+                      iconSize={6}
+                      wrapperStyle={{ fontSize: 10, paddingTop: 4 }}
+                    />
+                    <Line type="monotone" dataKey="Sleep" stroke="#6366F1" strokeWidth={2} dot={false} connectNulls />
+                    <Line type="monotone" dataKey="Mood" stroke="#2C5E3F" strokeWidth={2} dot={false} connectNulls />
+                    <Line type="monotone" dataKey="Energy" stroke="#F59E0B" strokeWidth={2} dot={false} connectNulls />
+                    <Line type="monotone" dataKey="Stress" stroke="#EF4444" strokeWidth={2} dot={false} connectNulls />
+                    <Line type="monotone" dataKey="Pain" stroke="#8B5CF6" strokeWidth={2} dot={false} connectNulls />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[100px] text-center">
+                  <TrendingUp className="w-6 h-6 text-gray-300 mb-2" />
+                  <p className="text-xs text-gray-400">Log 2+ check-ins to see your wellness trends</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* D. Weekly Macro Summary */}
         <div className="vitallity-card" data-testid="macro-summary-card">
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 className="w-4 h-4 text-[hsl(var(--accent))]" />
