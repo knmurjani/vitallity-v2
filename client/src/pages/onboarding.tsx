@@ -1528,170 +1528,138 @@ function Screen2({ data, update }: { data: OnboardingData; update: <K extends ke
   );
 }
 
-// ─── Body Diagram: line-art silhouette with radial pain spots ─
+// ─── Body Diagram: clean minimal silhouette with radial pain spots ─
 interface PainSpot { area: string; cx: number; cy: number; view: "front" | "back" | "both"; }
 
-// Maps body area names to their (cx, cy) spot positions on the front/back view
+// Pain spot coordinates for viewBox 0 0 240 420
 const FRONT_SPOTS: PainSpot[] = [
-  { area: "Head", cx: 130, cy: 28, view: "front" },
-  { area: "Neck", cx: 130, cy: 68, view: "front" },
-  { area: "Left Shoulder", cx: 156, cy: 83, view: "front" },
-  { area: "Right Shoulder", cx: 104, cy: 83, view: "front" },
-  { area: "Chest", cx: 130, cy: 107, view: "front" },
-  { area: "Abdomen", cx: 130, cy: 145, view: "front" },
-  { area: "Left Upper Arm", cx: 162, cy: 113, view: "front" },
-  { area: "Right Upper Arm", cx: 98, cy: 113, view: "front" },
-  { area: "Left Elbow", cx: 162, cy: 137, view: "front" },
-  { area: "Right Elbow", cx: 98, cy: 137, view: "front" },
-  { area: "Left Forearm", cx: 162, cy: 162, view: "front" },
-  { area: "Right Forearm", cx: 98, cy: 162, view: "front" },
-  { area: "Left Wrist", cx: 158, cy: 185, view: "front" },
-  { area: "Right Wrist", cx: 102, cy: 185, view: "front" },
-  { area: "Left Hand", cx: 158, cy: 203, view: "front" },
-  { area: "Right Hand", cx: 102, cy: 203, view: "front" },
-  { area: "Left Hip", cx: 145, cy: 183, view: "front" },
-  { area: "Right Hip", cx: 115, cy: 183, view: "front" },
-  { area: "Left Thigh", cx: 143, cy: 228, view: "front" },
-  { area: "Right Thigh", cx: 117, cy: 228, view: "front" },
-  { area: "Left Knee", cx: 142, cy: 268, view: "front" },
-  { area: "Right Knee", cx: 118, cy: 268, view: "front" },
-  { area: "Left Shin/Calf", cx: 138, cy: 308, view: "front" },
-  { area: "Right Shin/Calf", cx: 122, cy: 308, view: "front" },
-  { area: "Left Ankle", cx: 136, cy: 344, view: "front" },
-  { area: "Right Ankle", cx: 124, cy: 344, view: "front" },
-  { area: "Left Foot", cx: 138, cy: 362, view: "front" },
-  { area: "Right Foot", cx: 122, cy: 362, view: "front" },
+  { area: "Head", cx: 120, cy: 30, view: "front" },
+  { area: "Neck", cx: 120, cy: 60, view: "front" },
+  { area: "Left Shoulder", cx: 80, cy: 85, view: "front" },
+  { area: "Right Shoulder", cx: 160, cy: 85, view: "front" },
+  { area: "Chest", cx: 120, cy: 110, view: "front" },
+  { area: "Left Upper Arm", cx: 65, cy: 120, view: "front" },
+  { area: "Right Upper Arm", cx: 175, cy: 120, view: "front" },
+  { area: "Left Elbow", cx: 55, cy: 155, view: "front" },
+  { area: "Right Elbow", cx: 185, cy: 155, view: "front" },
+  { area: "Left Forearm", cx: 50, cy: 185, view: "front" },
+  { area: "Right Forearm", cx: 190, cy: 185, view: "front" },
+  { area: "Left Wrist", cx: 48, cy: 210, view: "front" },
+  { area: "Right Wrist", cx: 192, cy: 210, view: "front" },
+  { area: "Abdomen", cx: 120, cy: 165, view: "front" },
+  { area: "Left Hip", cx: 100, cy: 205, view: "front" },
+  { area: "Right Hip", cx: 140, cy: 205, view: "front" },
+  { area: "Left Thigh", cx: 97, cy: 250, view: "front" },
+  { area: "Right Thigh", cx: 143, cy: 250, view: "front" },
+  { area: "Left Knee", cx: 95, cy: 295, view: "front" },
+  { area: "Right Knee", cx: 145, cy: 295, view: "front" },
+  { area: "Left Shin", cx: 93, cy: 330, view: "front" },
+  { area: "Right Shin", cx: 147, cy: 330, view: "front" },
+  { area: "Left Ankle", cx: 92, cy: 370, view: "front" },
+  { area: "Right Ankle", cx: 148, cy: 370, view: "front" },
+  { area: "Left Foot", cx: 90, cy: 395, view: "front" },
+  { area: "Right Foot", cx: 150, cy: 395, view: "front" },
 ];
 
 const BACK_SPOTS: PainSpot[] = [
-  { area: "Head", cx: 130, cy: 28, view: "back" },
-  { area: "Neck (rear)", cx: 130, cy: 68, view: "back" },
-  { area: "Left Rear Shoulder", cx: 156, cy: 83, view: "back" },
-  { area: "Right Rear Shoulder", cx: 104, cy: 83, view: "back" },
-  { area: "Upper Back", cx: 130, cy: 104, view: "back" },
-  { area: "Mid Back", cx: 130, cy: 130, view: "back" },
-  { area: "Lower Back", cx: 130, cy: 155, view: "back" },
-  { area: "Left Tricep", cx: 162, cy: 113, view: "back" },
-  { area: "Right Tricep", cx: 98, cy: 113, view: "back" },
-  { area: "Left Forearm", cx: 162, cy: 162, view: "back" },
-  { area: "Right Forearm", cx: 98, cy: 162, view: "back" },
-  { area: "Glutes", cx: 130, cy: 190, view: "back" },
-  { area: "Left Hamstring", cx: 143, cy: 235, view: "back" },
-  { area: "Right Hamstring", cx: 117, cy: 235, view: "back" },
-  { area: "Left Knee", cx: 140, cy: 274, view: "back" },
-  { area: "Right Knee", cx: 120, cy: 274, view: "back" },
-  { area: "Left Calf (rear)", cx: 133, cy: 310, view: "back" },
-  { area: "Right Calf (rear)", cx: 127, cy: 310, view: "back" },
-  { area: "Left Foot", cx: 138, cy: 352, view: "back" },
-  { area: "Right Foot", cx: 122, cy: 352, view: "back" },
+  { area: "Head", cx: 120, cy: 30, view: "back" },
+  { area: "Neck (rear)", cx: 120, cy: 60, view: "back" },
+  { area: "Left Rear Shoulder", cx: 80, cy: 85, view: "back" },
+  { area: "Right Rear Shoulder", cx: 160, cy: 85, view: "back" },
+  { area: "Upper Back", cx: 120, cy: 110, view: "back" },
+  { area: "Left Tricep", cx: 65, cy: 120, view: "back" },
+  { area: "Right Tricep", cx: 175, cy: 120, view: "back" },
+  { area: "Left Elbow", cx: 55, cy: 155, view: "back" },
+  { area: "Right Elbow", cx: 185, cy: 155, view: "back" },
+  { area: "Left Forearm", cx: 50, cy: 185, view: "back" },
+  { area: "Right Forearm", cx: 190, cy: 185, view: "back" },
+  { area: "Mid Back", cx: 120, cy: 145, view: "back" },
+  { area: "Lower Back", cx: 120, cy: 175, view: "back" },
+  { area: "Glutes", cx: 120, cy: 210, view: "back" },
+  { area: "Left Hamstring", cx: 97, cy: 250, view: "back" },
+  { area: "Right Hamstring", cx: 143, cy: 250, view: "back" },
+  { area: "Left Knee", cx: 95, cy: 295, view: "back" },
+  { area: "Right Knee", cx: 145, cy: 295, view: "back" },
+  { area: "Left Calf", cx: 93, cy: 330, view: "back" },
+  { area: "Right Calf", cx: 147, cy: 330, view: "back" },
+  { area: "Left Ankle", cx: 92, cy: 370, view: "back" },
+  { area: "Right Ankle", cx: 148, cy: 370, view: "back" },
+  { area: "Left Foot", cx: 90, cy: 395, view: "back" },
+  { area: "Right Foot", cx: 150, cy: 395, view: "back" },
 ];
 
-// Compute BMI-based body silhouette variant
-function getBodyVariant(gender: string, bmi: number): "male-slim" | "male-avg" | "female-slim" | "female-avg" {
-  const isFemale = gender === "Female";
-  const isSlim = bmi < 25;
-  if (isFemale) return isSlim ? "female-slim" : "female-avg";
-  return isSlim ? "male-slim" : "male-avg";
-}
+// Clean minimal human silhouette paths — single smooth stroke, viewBox 0 0 240 420
+// Male outline: broader shoulders, straight torso, legs apart
+const MALE_PATH =
+  // Head
+  "M120,8 C109,8 101,16 101,27 C101,38 109,46 120,46 C131,46 139,38 139,27 C139,16 131,8 120,8 Z" +
+  // Neck left side
+  " M113,46 C111,50 110,56 110,62" +
+  // Neck right side
+  " M127,46 C129,50 130,56 130,62" +
+  // Left shoulder and arm outline (outer)
+  " M110,62 C103,63 92,67 80,72 C70,76 62,81 58,88 C54,95 52,107 51,120 C50,133 50,148 51,162 C52,174 54,184 57,193 C59,200 61,207 62,213 C63,217 63,220 62,222" +
+  // Left arm inner (returns up torso side)
+  " M80,72 C83,75 85,82 85,92 C85,104 84,119 84,132 C83,145 83,156 84,165 C85,174 88,181 91,187 C93,192 96,196 99,200" +
+  // Left leg
+  " M99,200 C101,206 103,214 104,224 C105,238 104,254 102,270 C100,285 97,299 95,312 C93,325 92,338 91,350 C90,361 89,371 89,378 C88,385 88,390 88,394 L88,402 C88,407 91,410 96,410 C102,410 108,409 112,409 C115,409 117,410 117,412" +
+  // Crotch line
+  " M117,210 C118,212 120,213 120,213 C120,213 122,212 123,210" +
+  // Right leg
+  " M123,210 C124,215 125,222 126,232 C128,246 131,262 134,278 C137,292 139,306 141,318 C142,330 143,342 144,354 C145,364 147,372 150,378 C151,385 152,390 152,394 L152,402 C152,407 149,410 144,410 C138,410 132,409 128,409 C125,409 123,410 123,412" +
+  // Right torso side
+  " M130,62 C137,63 148,67 160,72 C170,76 178,81 182,88 C155,96 154,112 154,128 C153,143 154,158 155,170 C156,180 157,188 157,196 C157,201 156,205 155,208 C153,211 150,212 148,213" +
+  // Right arm outer
+  " M160,72 C170,76 178,81 182,88 C186,95 188,107 189,120 C190,133 190,148 189,162 C188,174 186,184 183,193 C181,200 179,207 178,213 C177,217 177,220 178,222";
+
+const FEMALE_PATH =
+  // Head (slightly smaller)
+  "M120,8 C110,8 103,16 103,27 C103,38 110,46 120,46 C130,46 137,38 137,27 C137,16 130,8 120,8 Z" +
+  // Neck
+  " M114,46 C112,50 111,56 111,62" +
+  " M126,46 C128,50 129,56 129,62" +
+  // Left shoulder and arm (narrower shoulders)
+  " M111,62 C105,63 95,67 85,72 C77,76 71,81 68,87 C65,93 63,105 62,118 C61,131 61,146 62,160 C63,172 65,182 68,191 C70,198 72,205 73,211 C74,215 74,218 73,220" +
+  // Left torso with waist curve
+  " M85,72 C88,75 90,82 90,91 C90,103 89,116 88,128 C87,139 86,149 85,157 C84,164 84,170 85,176 C87,183 91,191 96,199 C100,206 105,212 109,217" +
+  // Left hip flare
+  " M85,157 C82,161 79,167 78,174 C77,181 79,189 83,196 C87,202 93,207 99,210" +
+  // Left leg
+  " M109,217 C110,222 111,229 111,239 C111,252 109,266 107,280 C105,293 103,306 101,318 C99,330 98,342 97,354 C96,364 95,372 94,378 C93,385 92,390 92,394 L92,402 C92,407 95,410 100,410 C106,410 112,409 116,409 C118,409 119,410 119,412" +
+  // Crotch
+  " M119,218 C120,220 121,221 121,221 C121,221 122,220 121,218" +
+  // Right leg
+  " M121,218 C122,222 123,229 123,239 C124,252 125,266 127,280 C129,293 131,306 133,318 C135,330 136,342 137,354 C138,364 139,372 140,378 C141,385 142,390 142,394 L142,402 C142,407 139,410 134,410 C128,410 122,409 118,409" +
+  // Right torso with waist curve
+  " M129,62 C135,63 145,67 155,72 C163,76 169,81 172,87 C147,95 146,110 145,125 C144,139 145,153 146,164 C147,172 148,180 148,187 C148,194 147,200 144,206 C141,211 137,216 133,219" +
+  // Right hip flare
+  " M155,157 C158,161 161,167 162,174 C163,181 161,189 157,196 C153,202 147,207 141,210" +
+  // Right arm outer
+  " M155,72 C163,76 169,81 172,87 C175,93 177,105 178,118 C179,131 179,146 178,160 C177,172 175,182 172,191 C170,198 168,205 167,211 C166,215 166,218 167,220";
 
 // Clickable hotspot size
 const HIT_R = 18;
 
 function BodySilhouetteSVG({
   view,
-  variant,
+  gender,
   selectedAreas,
   autoSuggestedAreas,
   onToggle,
 }: {
   view: "front" | "back";
-  variant: "male-slim" | "male-avg" | "female-slim" | "female-avg";
+  gender: string;
   selectedAreas: string[];
   autoSuggestedAreas: string[];
   onToggle: (area: string) => void;
 }) {
   const spots = view === "front" ? FRONT_SPOTS : BACK_SPOTS;
-
-  // Body silhouette path data per variant (front / back encoded together as one viewBox 0 0 260 420)
-  const outlines: Record<string, { front: string; back: string }> = {
-    "male-slim": {
-      front: `M130,10 C119,10 110,18 109,30 C108,42 114,52 122,56 L122,65 C118,66 116,70 116,75
-              L102,72 C94,70 87,75 87,82 C87,89 94,95 102,97 L100,140 L95,145 L90,185
-              L88,200 L93,215 L93,200 L96,220 L98,278 L96,345 L98,370 L102,375 L110,375 L114,345 L116,280
-              L118,260 L120,202 L122,202 L124,260 L126,280 L126,345 L130,375 L134,375 L138,345 L140,280
-              L142,260 L140,202 L142,202 L144,260 L146,280 L146,345 L150,375 L158,375 L162,370 L164,345
-              L162,278 L164,220 L167,200 L167,215 L172,200 L170,185 L165,145 L160,140 L158,97
-              C166,95 173,89 173,82 C173,75 166,70 158,72 L144,75 C144,70 142,66 138,65 L138,56
-              C146,52 152,42 151,30 C150,18 141,10 130,10 Z`,
-      back: `M130,10 C119,10 110,18 109,30 C108,42 114,52 122,56 L122,65 C118,66 116,70 116,75
-             L102,72 C94,70 87,75 87,82 C87,89 94,95 102,97 L100,140 L95,145 L90,185
-             L88,200 L93,215 L93,200 L96,220 L98,278 L96,345 L98,370 L102,375 L110,375 L114,345 L116,280
-             L118,260 L120,202 L122,202 L124,260 L126,280 L126,345 L130,375 L134,375 L138,345 L140,280
-             L142,260 L140,202 L142,202 L144,260 L146,280 L146,345 L150,375 L158,375 L162,370 L164,345
-             L162,278 L164,220 L167,200 L167,215 L172,200 L170,185 L165,145 L160,140 L158,97
-             C166,95 173,89 173,82 C173,75 166,70 158,72 L144,75 C144,70 142,66 138,65 L138,56
-             C146,52 152,42 151,30 C150,18 141,10 130,10 Z`,
-    },
-    "male-avg": {
-      front: `M130,10 C118,10 108,19 107,31 C106,43 113,53 122,57 L122,66 C117,67 114,72 114,78
-              L98,74 C89,72 81,77 81,85 C81,93 89,100 98,102 L96,145 L90,152 L84,195
-              L82,212 L88,228 L88,212 L92,235 L94,285 L92,348 L94,372 L100,376 L110,376 L114,348 L116,288
-              L119,264 L120,204 L122,204 L125,264 L126,288 L126,348 L130,376 L134,376 L134,348 L134,288
-              L135,264 L138,204 L140,204 L141,264 L144,288 L144,348 L150,376 L160,376 L166,372 L168,348
-              L166,285 L168,235 L172,212 L172,228 L178,212 L176,195 L170,152 L164,145 L162,102
-              C171,100 179,93 179,85 C179,77 171,72 162,74 L146,78 C146,72 143,67 138,66 L138,57
-              C147,53 154,43 153,31 C152,19 142,10 130,10 Z`,
-      back: `M130,10 C118,10 108,19 107,31 C106,43 113,53 122,57 L122,66 C117,67 114,72 114,78
-             L98,74 C89,72 81,77 81,85 C81,93 89,100 98,102 L96,145 L90,152 L84,195
-             L82,212 L88,228 L88,212 L92,235 L94,285 L92,348 L94,372 L100,376 L110,376 L114,348 L116,288
-             L119,264 L120,204 L122,204 L125,264 L126,288 L126,348 L130,376 L134,376 L134,348 L134,288
-             L135,264 L138,204 L140,204 L141,264 L144,288 L144,348 L150,376 L160,376 L166,372 L168,348
-             L166,285 L168,235 L172,212 L172,228 L178,212 L176,195 L170,152 L164,145 L162,102
-             C171,100 179,93 179,85 C179,77 171,72 162,74 L146,78 C146,72 143,67 138,66 L138,57
-             C147,53 154,43 153,31 C152,19 142,10 130,10 Z`,
-    },
-    "female-slim": {
-      front: `M130,10 C119,10 111,18 110,29 C109,40 115,50 122,54 L122,63 C119,64 117,68 117,73
-              L105,70 C97,68 91,73 91,80 C91,87 97,93 105,95 L103,136 L98,143 L95,180
-              C94,188 95,196 98,200 C101,205 108,210 116,215 C121,218 126,220 130,220
-              C134,220 139,218 144,215 C152,210 159,205 162,200 C165,196 166,188 165,180 L162,143 L157,136
-              L155,95 C163,93 169,87 169,80 C169,73 163,68 155,70 L143,73 C143,68 141,64 138,63
-              L138,54 C145,50 151,40 150,29 C149,18 141,10 130,10 Z
-              M116,215 L114,252 L112,278 L110,345 L113,370 L118,374 L126,374 L128,348 L130,345
-              L132,348 L134,374 L142,374 L147,370 L150,345 L148,278 L146,252 L144,215`,
-      back: `M130,10 C119,10 111,18 110,29 C109,40 115,50 122,54 L122,63 C119,64 117,68 117,73
-             L105,70 C97,68 91,73 91,80 C91,87 97,93 105,95 L103,136 L98,143 L95,180
-             C94,188 95,196 98,200 C101,205 108,210 116,215 C121,218 126,220 130,220
-             C134,220 139,218 144,215 C152,210 159,205 162,200 C165,196 166,188 165,180 L162,143 L157,136
-             L155,95 C163,93 169,87 169,80 C169,73 163,68 155,70 L143,73 C143,68 141,64 138,63
-             L138,54 C145,50 151,40 150,29 C149,18 141,10 130,10 Z
-             M116,215 L114,252 L112,278 L110,345 L113,370 L118,374 L126,374 L128,348 L130,345
-             L132,348 L134,374 L142,374 L147,370 L150,345 L148,278 L146,252 L144,215`,
-    },
-    "female-avg": {
-      front: `M130,10 C118,10 109,19 108,30 C107,42 114,52 122,56 L122,65 C118,66 115,71 115,77
-              L100,73 C91,71 84,77 84,84 C84,91 91,98 100,100 L98,140 L92,148 L87,188
-              C85,198 87,208 91,214 C95,220 105,228 118,234 C123,237 127,240 130,240
-              C133,240 137,237 142,234 C155,228 165,220 169,214 C173,208 175,198 173,188
-              L168,148 L162,140 L160,100 C169,98 176,91 176,84 C176,77 169,71 160,73
-              L145,77 C145,71 142,66 138,65 L138,56 C146,52 153,42 152,30 C151,19 142,10 130,10 Z
-              M118,234 L116,265 L114,290 L112,350 L115,372 L122,376 L128,376 L130,350
-              L132,376 L138,376 L145,372 L148,350 L146,290 L144,265 L142,234`,
-      back: `M130,10 C118,10 109,19 108,30 C107,42 114,52 122,56 L122,65 C118,66 115,71 115,77
-             L100,73 C91,71 84,77 84,84 C84,91 91,98 100,100 L98,140 L92,148 L87,188
-             C85,198 87,208 91,214 C95,220 105,228 118,234 C123,237 127,240 130,240
-             C133,240 137,237 142,234 C155,228 165,220 169,214 C173,208 175,198 173,188
-             L168,148 L162,140 L160,100 C169,98 176,91 176,84 C176,77 169,71 160,73
-             L145,77 C145,71 142,66 138,65 L138,56 C146,52 153,42 152,30 C151,19 142,10 130,10 Z
-             M118,234 L116,265 L114,290 L112,350 L115,372 L122,376 L128,376 L130,350
-             L132,376 L138,376 L145,372 L148,350 L146,290 L144,265 L142,234`,
-    },
-  };
-
-  const pathData = outlines[variant][view];
+  const isFemale = gender === "Female";
+  // Use the same outline for front and back (symmetric silhouette)
+  const pathData = isFemale ? FEMALE_PATH : MALE_PATH;
 
   return (
-    <svg viewBox="0 0 260 400" className="w-[200px] h-[340px]" aria-label={`Human body ${view} view`}>
+    <svg viewBox="0 0 240 420" className="w-[240px] h-[420px]" aria-label={`Human body ${view} view`}>
       <defs>
         <radialGradient id="painGradient" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ef4444" stopOpacity="0.9" />
@@ -1705,21 +1673,21 @@ function BodySilhouetteSVG({
         </radialGradient>
         <style>{`
           @keyframes painPulse {
-            0%, 100% { r: 10; opacity: 0.9; }
-            50% { r: 14; opacity: 0.6; }
+            0%, 100% { opacity: 0.9; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.3); }
           }
-          .pain-spot { animation: painPulse 1.8s ease-in-out infinite; }
+          .pain-spot { animation: painPulse 1.8s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
         `}</style>
       </defs>
 
-      {/* Body silhouette -- line art */}
+      {/* Body silhouette -- clean single-stroke line art */}
       <path
         d={pathData}
-        stroke="#1A1A1A"
-        strokeWidth="1.5"
+        stroke="#333"
+        strokeWidth="1.2"
         fill="none"
-        strokeLinejoin="round"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
 
       {/* Pain spots */}
@@ -1743,10 +1711,24 @@ function BodySilhouetteSVG({
               <circle
                 cx={spot.cx}
                 cy={spot.cy}
-                r={10}
+                r={12}
                 fill={selected ? "url(#painGradient)" : "url(#autoGradient)"}
                 className={selected ? "pain-spot" : ""}
               />
+            )}
+            {/* Label when selected */}
+            {selected && (
+              <text
+                x={spot.cx}
+                y={spot.cy + 22}
+                textAnchor="middle"
+                fontSize="7"
+                fill="#ef4444"
+                fontWeight="600"
+                style={{ pointerEvents: "none" }}
+              >
+                {spot.area}
+              </text>
             )}
           </g>
         );
@@ -1771,12 +1753,6 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
       update("painAreas", [...without, area]);
     }
   };
-
-  const bmi2 = useMemo(() => {
-    if (!data.heightCm || !data.weightKg) return 22;
-    return data.weightKg / Math.pow(data.heightCm / 100, 2);
-  }, [data.heightCm, data.weightKg]);
-  const bodyVariant = getBodyVariant(data.gender, bmi2);
 
   const addCustomPain = () => {
     if (data.customPainArea.trim() && !data.painAreas.includes(data.customPainArea.trim())) {
@@ -1830,7 +1806,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
       <div className="flex justify-center mb-4" data-testid="body-diagram-container">
         <BodySilhouetteSVG
           view={bodyView}
-          variant={bodyVariant}
+          gender={data.gender}
           selectedAreas={data.painAreas}
           autoSuggestedAreas={data.autoSuggestedPain}
           onToggle={togglePain}

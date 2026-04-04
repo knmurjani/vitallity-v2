@@ -69,7 +69,7 @@ function ensureTables() {
       email TEXT UNIQUE,
       password_hash TEXT NOT NULL DEFAULT '',
       onboarding_completed INTEGER DEFAULT 0,
-      onboarding_step INTEGER DEFAULT 1,
+      onboarding_step INTEGER DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       google_id TEXT UNIQUE,
       phone TEXT UNIQUE,
@@ -1412,7 +1412,7 @@ export class DatabaseStorage implements IStorage {
     db.delete(userPoints).where(eq(userPoints.userId, userId)).run();
 
     // Reset onboarding
-    db.update(users).set({ onboardingCompleted: false, onboardingStep: 1, tourCompleted: false }).where(eq(users.id, userId)).run();
+    db.update(users).set({ onboardingCompleted: false, onboardingStep: 0, tourCompleted: false }).where(eq(users.id, userId)).run();
   }
 
   // ==================== HEALTH RECORDS ====================

@@ -981,7 +981,8 @@ export async function registerRoutes(
       }
 
       const systemPrompt = buildOnboardingChatSystemPrompt();
-      const aiResponse = await callSonnet(systemPrompt, messages);
+      // Use a longer timeout for onboarding chat since the system prompt is long
+      const aiResponse = await callSonnet(systemPrompt, messages, 120000);
 
       let parsed: {
         reply: string;
@@ -993,11 +994,23 @@ export async function registerRoutes(
       };
 
       try {
-        let cleaned = aiResponse.trim();
-        if (cleaned.startsWith("```")) {
-          cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+        let aiText = aiResponse.trim();
+        // Robust JSON extraction: handle markdown code fences and bare JSON objects
+        try {
+          parsed = JSON.parse(aiText);
+        } catch {
+          const jsonMatch = aiText.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (jsonMatch) {
+            parsed = JSON.parse(jsonMatch[1].trim());
+          } else {
+            const braceMatch = aiText.match(/\{[\s\S]*\}/);
+            if (braceMatch) {
+              parsed = JSON.parse(braceMatch[0]);
+            } else {
+              throw new Error("Could not parse AI response as JSON");
+            }
+          }
         }
-        parsed = JSON.parse(cleaned);
       } catch {
         parsed = {
           reply: aiResponse,

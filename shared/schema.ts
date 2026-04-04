@@ -8,7 +8,7 @@ export const users = sqliteTable("users", {
   email: text("email").unique(),
   passwordHash: text("password_hash").notNull().default(""),
   onboardingCompleted: integer("onboarding_completed", { mode: "boolean" }).default(false),
-  onboardingStep: integer("onboarding_step").default(1),
+  onboardingStep: integer("onboarding_step").default(0),
   createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
   googleId: text("google_id").unique(),
   phone: text("phone").unique(),
