@@ -202,7 +202,7 @@ export default function AuthPage() {
           src={heroAuth}
           alt=""
           className="w-full h-full object-cover transition-transform duration-700"
-          style={{ transform: panelOpen ? "scale(1.03)" : "scale(1)" }}
+          style={{ objectPosition: 'center 25%', transform: panelOpen ? "scale(1.03)" : "scale(1)" }}
           aria-hidden="true"
         />
         {/* Subtle vignette overlay -- stronger when panel is open */}

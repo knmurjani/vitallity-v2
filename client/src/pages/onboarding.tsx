@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import bodyFrontImg from "@assets/body-front.png";
 import bodyBackImg from "@assets/body-back.png";
+import bodyFemaleFrontImg from "@assets/body-female-front.png";
+import bodyFemaleBackImg from "@assets/body-female-back.png";
 import { useLocation } from "wouter";
 import { useAuth, useAuthFetch } from "@/hooks/use-auth";
 import { ChipGroup, Chip } from "@/components/ui/chip";
@@ -1594,13 +1596,18 @@ function BodyDiagramImage({
   view,
   selectedAreas,
   onToggle,
+  gender,
 }: {
   view: "front" | "back";
   selectedAreas: string[];
   onToggle: (area: string) => void;
+  gender?: string;
 }) {
   const hotspots = view === "front" ? FRONT_HOTSPOTS : BACK_HOTSPOTS;
-  const imgSrc = view === "front" ? bodyFrontImg : bodyBackImg;
+  const isFemale = gender === "Female";
+  const imgSrc = view === "front"
+    ? (isFemale ? bodyFemaleFrontImg : bodyFrontImg)
+    : (isFemale ? bodyFemaleBackImg : bodyBackImg);
 
   return (
     <div
@@ -1751,6 +1758,7 @@ function Screen3({ data, update }: { data: OnboardingData; update: <K extends ke
           view={bodyView}
           selectedAreas={data.painAreas}
           onToggle={togglePain}
+          gender={data.gender}
         />
       </div>
 
