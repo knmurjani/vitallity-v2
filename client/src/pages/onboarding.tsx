@@ -829,11 +829,11 @@ export default function Onboarding() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-sm">Guided Consultation</span>
+                  <span className="font-semibold text-sm">AI Chat Consultation</span>
                   <span className="text-[10px] bg-primary text-white px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Recommended</span>
                 </div>
                 <p className="text-xs text-gray-600">
-                  Chat with your AI coach to build your personalized plan. Takes about 5-7 minutes.
+                  A conversational, chat-based intake with your AI health coach. It asks questions naturally, reacts to your answers, and builds your profile through dialogue. About 5-7 minutes.
                 </p>
               </div>
             </div>
@@ -851,9 +851,9 @@ export default function Onboarding() {
                 <ListChecks className="w-5 h-5 text-gray-600" />
               </div>
               <div className="flex-1">
-                <span className="font-semibold text-sm block mb-1">Quick Setup</span>
+                <span className="font-semibold text-sm block mb-1">Form-Based Setup</span>
                 <p className="text-xs text-gray-500">
-                  Fill out a structured questionnaire. Takes about 8-10 minutes.
+                  A structured questionnaire with screens for each topic -- health history, lifestyle, goals, and more. Faster to skim, easier to go back and edit. About 8-10 minutes.
                 </p>
               </div>
             </div>
