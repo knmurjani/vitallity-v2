@@ -205,8 +205,12 @@ export default function AuthPage() {
           <img
             src={heroAuth}
             alt=""
-            className="w-full h-full object-cover transition-transform duration-700"
-            style={{ transform: panelOpen ? "scale(1.03)" : "scale(1)" }}
+            className="w-full h-full transition-transform duration-700"
+            style={{
+              objectFit: 'cover',
+              objectPosition: 'center top',
+              transform: panelOpen ? "scale(1.03)" : "scale(1)"
+            }}
             aria-hidden="true"
           />
         </picture>
