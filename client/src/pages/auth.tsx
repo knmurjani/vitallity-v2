@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, Loader2, Phone, Shield, ChevronRight } from "lucide-react";
 import heroAuth from "@assets/hero-auth.jpg";
+import heroAuthDesktop from "@assets/hero-auth-desktop.jpg";
 
 declare const google: any;
 
@@ -198,13 +199,17 @@ export default function AuthPage() {
     <div className="relative min-h-screen w-full overflow-hidden" data-testid="auth-page">
       {/* Full-bleed hero background */}
       <div className="absolute inset-0 bg-[#2a1f14]">
-        <img
-          src={heroAuth}
-          alt=""
-          className="w-full h-full object-cover transition-transform duration-700"
-          style={{ transform: panelOpen ? "scale(1.03)" : "scale(1)" }}
-          aria-hidden="true"
-        />
+        {/* portrait for mobile, landscape for desktop -- both show full arms */}
+        <picture>
+          <source media="(min-width: 768px)" srcSet={heroAuthDesktop} />
+          <img
+            src={heroAuth}
+            alt=""
+            className="w-full h-full object-cover transition-transform duration-700"
+            style={{ transform: panelOpen ? "scale(1.03)" : "scale(1)" }}
+            aria-hidden="true"
+          />
+        </picture>
         {/* Subtle vignette overlay -- stronger when panel is open */}
         <div
           className="absolute inset-0 transition-opacity duration-500"
