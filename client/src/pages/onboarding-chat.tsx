@@ -631,7 +631,7 @@ export default function OnboardingChat() {
           if (d.heightCm) merged.heightCm = Number(d.heightCm);
           if ((d as any).heightFt) merged.heightFt = Number((d as any).heightFt);
           if ((d as any).heightIn !== undefined) merged.heightIn = Number((d as any).heightIn);
-          if ((d as any).heightUnit) merged.heightUnit = String((d as any).heightUnit);
+          if ((d as any).heightUnit) merged.heightUnit = String((d as any).heightUnit).includes('ft') ? 'ftin' : 'cm';
           // Convert ft/in to cm if we got feet but no cm
           if ((d as any).heightFt && !d.heightCm) {
             const ft = Number((d as any).heightFt);
@@ -641,7 +641,7 @@ export default function OnboardingChat() {
             merged.heightIn = inches;
           }
           // If we already have ft/in stored, recalculate cm from them
-          if (merged.heightFt && merged.heightUnit === "ft") {
+          if (merged.heightFt && merged.heightUnit === "ftin") {
             merged.heightCm = Math.round((merged.heightFt * 12 + (merged.heightIn || 0)) * 2.54);
           }
 
@@ -650,7 +650,7 @@ export default function OnboardingChat() {
           if ((d as any).weightLbs) {
             merged.weightKg = Math.round(Number((d as any).weightLbs) / 2.20462 * 10) / 10;
           }
-          if ((d as any).weightUnit) merged.weightUnit = String((d as any).weightUnit);
+          if ((d as any).weightUnit) merged.weightUnit = String((d as any).weightUnit).includes('lb') ? 'lbs' : 'kg';
           if (d.painAreas) merged.painAreas = d.painAreas as string[];
           if (d.activities) merged.activities = d.activities as string[];
           if (d.goals) merged.goals = d.goals as string[];
