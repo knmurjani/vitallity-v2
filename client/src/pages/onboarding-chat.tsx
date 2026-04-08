@@ -6,6 +6,10 @@ import {
   MessageCircle, Check, AlertTriangle, Eye, Star,
   Target, Compass, Shield, Brain,
 } from "lucide-react";
+import bodyFrontImg from "@assets/body-front.png";
+import bodyBackImg from "@assets/body-back.png";
+import bodyFemaleFrontImg from "@assets/body-female-front.png";
+import bodyFemaleBackImg from "@assets/body-female-back.png";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -198,13 +202,23 @@ const defaultChatData: OnboardingChatData = {
 
 // ─── Visual Element Components ───────────────────────────────
 
-const PAIN_OPTIONS = [
+const PAIN_OPTIONS_FRONT = [
   "Head", "Neck", "Left Shoulder", "Right Shoulder", "Chest",
-  "Upper Back", "Mid Back", "Lower Back",
-  "Left Hip", "Right Hip", "Abdomen",
-  "Left Knee", "Right Knee", "Left Ankle", "Right Ankle",
-  "Left Wrist", "Right Wrist", "Full Body", "None",
+  "Left Upper Arm", "Right Upper Arm", "Left Elbow", "Right Elbow",
+  "Left Forearm", "Right Forearm", "Left Wrist", "Right Wrist",
+  "Abdomen", "Left Hip", "Right Hip",
+  "Left Quad", "Right Quad", "Left Knee", "Right Knee",
+  "Left Shin", "Right Shin", "Left Ankle", "Right Ankle",
+  "Left Foot", "Right Foot",
 ];
+const PAIN_OPTIONS_BACK = [
+  "Upper Back", "Mid Back", "Lower Back",
+  "Left Rear Shoulder", "Right Rear Shoulder",
+  "Left Tricep", "Right Tricep",
+  "Glutes", "Left Hamstring", "Right Hamstring",
+  "Left Calf", "Right Calf",
+];
+const PAIN_OPTIONS = [...PAIN_OPTIONS_FRONT, ...PAIN_OPTIONS_BACK, "Full Body", "None"];
 
 const HEALTH_CONDITIONS = [
   "Type 2 Diabetes", "Type 1 Diabetes", "Hypertension",
@@ -229,43 +243,95 @@ const GOAL_OPTIONS = [
   "Improve Fitness",
 ];
 
-function BodyDiagramVisual({ onSelect }: { onSelect: (areas: string[]) => void }) {
+function BodyDiagramVisual({ onSelect, gender }: { onSelect: (areas: string[]) => void; gender?: string }) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [view, setView] = useState<"front" | "back">("front");
+  const isFemale = gender === "Female";
 
   const toggle = (area: string) => {
+    if (area === "None") { setSelected([]); return; }
+    if (area === "Full Body") { setSelected(["Full Body"]); return; }
     setSelected(prev =>
-      prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
+      prev.includes(area) ? prev.filter(a => a !== area) : [...prev.filter(a => a !== "Full Body" && a !== "None"), area]
     );
   };
 
+  const currentOptions = view === "front" ? PAIN_OPTIONS_FRONT : PAIN_OPTIONS_BACK;
+
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-4 my-3" data-testid="visual-body-diagram">
-      <p className="text-xs text-gray-500 mb-3 font-medium">Select areas of pain or discomfort</p>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {PAIN_OPTIONS.map(area => (
-          <button
-            key={area}
-            type="button"
-            onClick={() => toggle(area)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              selected.includes(area)
-                ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-            data-testid={`pain-area-${area.toLowerCase().replace(/\s/g, "-")}`}
-          >
+      {/* Front/Back toggle */}
+      <div className="flex gap-2 mb-3">
+        <button type="button" onClick={() => setView("front")}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${view === "front" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}>
+          Front View
+        </button>
+        <button type="button" onClick={() => setView("back")}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${view === "back" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"}`}>
+          Back View
+        </button>
+      </div>
+
+      {/* Body image with overlay */}
+      <div className="relative mx-auto mb-3" style={{ width: 200, height: 340 }}>
+        <img
+          src={view === "front" ? (isFemale ? bodyFemaleFrontImg : bodyFrontImg) : (isFemale ? bodyFemaleBackImg : bodyBackImg)}
+          alt={`${view} body view`}
+          className="w-full h-full object-contain"
+        />
+        {/* Selected pain spots overlay */}
+        {selected.filter(a => a !== "Full Body" && a !== "None").map(area => {
+          const allAreas = [...PAIN_OPTIONS_FRONT, ...PAIN_OPTIONS_BACK];
+          const idx = allAreas.indexOf(area);
+          if (idx < 0) return null;
+          return (
+            <div key={area} className="absolute w-5 h-5 rounded-full animate-pulse"
+              style={{
+                background: "radial-gradient(circle, rgba(239,68,68,0.7) 0%, rgba(239,68,68,0.2) 70%, transparent 100%)",
+                top: `${15 + (idx % 13) * 6}%`,
+                left: `${30 + (idx % 5) * 10}%`,
+              }} />
+          );
+        })}
+      </div>
+
+      <p className="text-[10px] text-gray-400 text-center mb-2">
+        Tap areas below or use the diagram as reference
+      </p>
+
+      {/* Area chips */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {currentOptions.map(area => (
+          <button key={area} type="button" onClick={() => toggle(area)}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+              selected.includes(area) ? "bg-red-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}>
             {area}
           </button>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={() => onSelect(selected)}
-        disabled={selected.length === 0}
-        className="w-full py-2 rounded-xl text-sm font-semibold bg-primary text-white disabled:opacity-40 transition-opacity"
-        data-testid="pain-area-confirm"
-      >
-        {selected.length === 0 ? "Select areas above" : `Confirm ${selected.length} area${selected.length > 1 ? "s" : ""}`}
+
+      {/* Full Body / None */}
+      <div className="flex gap-2 mb-3">
+        <button type="button" onClick={() => toggle("Full Body")}
+          className={`flex-1 py-1.5 rounded-full text-[11px] font-medium transition-all ${
+            selected.includes("Full Body") ? "bg-red-500 text-white" : "bg-gray-100 text-gray-700"
+          }`}>Full Body</button>
+        <button type="button" onClick={() => toggle("None")}
+          className={`flex-1 py-1.5 rounded-full text-[11px] font-medium transition-all ${
+            selected.length === 0 ? "bg-primary text-white" : "bg-gray-100 text-gray-700"
+          }`}>No Pain</button>
+      </div>
+
+      {/* Selected summary */}
+      {selected.length > 0 && (
+        <p className="text-[10px] text-gray-500 mb-2">Selected: {selected.join(", ")}</p>
+      )}
+
+      <button type="button" onClick={() => onSelect(selected.length > 0 ? selected : ["None"])}
+        className="w-full py-2.5 rounded-xl text-sm font-semibold bg-primary text-white transition-opacity"
+        data-testid="pain-area-confirm">
+        {selected.length === 0 ? "No pain -- continue" : `Confirm ${selected.length} area${selected.length > 1 ? "s" : ""}`}
       </button>
     </div>
   );
@@ -1011,6 +1077,7 @@ export default function OnboardingChat() {
                   {msg.visualElement === "body_diagram" && (
                     <BodyDiagramVisual
                       onSelect={(areas) => handleVisualSelect("body_diagram", areas)}
+                      gender={currentData.gender}
                     />
                   )}
                   {msg.visualElement === "weight_input" && (
