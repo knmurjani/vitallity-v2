@@ -24,6 +24,8 @@ import {
   type UserPoint,
   type HealthRecord,
   type HealthParameter,
+  type WeeklyPlan,
+  type WeeklyPlanLog,
   dailyLogs,
   badges,
   userBadges,
@@ -49,6 +51,8 @@ import {
   phoneOtps,
   healthRecords,
   healthParameters,
+  weeklyPlans,
+  weeklyPlanLogs,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -377,6 +381,26 @@ function ensureTables() {
     );
   `);
 
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS weekly_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      week_start_date TEXT NOT NULL,
+      plan_data TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS weekly_plan_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      week_start_date TEXT NOT NULL,
+      day_index INTEGER NOT NULL,
+      section_key TEXT NOT NULL,
+      item_key TEXT NOT NULL,
+      completed_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // Add columns to users if missing (for upgrades)
   const addCol = (col: string, type: string) => {
     try { sqlite.exec(`ALTER TABLE users ADD COLUMN ${col} ${type}`); } catch {}
@@ -596,6 +620,13 @@ export interface IStorage {
   getHealthParametersByRecord(recordId: number): HealthParameter[];
   createHealthParameter(data: Omit<HealthParameter, "id" | "createdAt">): HealthParameter;
   deleteHealthParametersByRecord(recordId: number): void;
+
+  // Weekly Plan
+  getWeeklyPlan(userId: number, weekStartDate: string): WeeklyPlan | undefined;
+  saveWeeklyPlan(userId: number, weekStartDate: string, planData: string): WeeklyPlan;
+  getWeeklyPlanLogs(userId: number, weekStartDate: string): WeeklyPlanLog[];
+  logWeeklyPlanItem(userId: number, weekStartDate: string, dayIndex: number, sectionKey: string, itemKey: string): WeeklyPlanLog;
+  removeWeeklyPlanLog(userId: number, weekStartDate: string, dayIndex: number, sectionKey: string, itemKey: string): void;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1459,6 +1490,55 @@ export class DatabaseStorage implements IStorage {
 
   deleteHealthParametersByRecord(recordId: number): void {
     db.delete(healthParameters).where(eq(healthParameters.recordId, recordId)).run();
+  }
+
+  // ==================== WEEKLY PLAN ====================
+
+  getWeeklyPlan(userId: number, weekStartDate: string): WeeklyPlan | undefined {
+    return db.select().from(weeklyPlans)
+      .where(and(eq(weeklyPlans.userId, userId), eq(weeklyPlans.weekStartDate, weekStartDate)))
+      .get();
+  }
+
+  saveWeeklyPlan(userId: number, weekStartDate: string, planData: string): WeeklyPlan {
+    const existing = this.getWeeklyPlan(userId, weekStartDate);
+    if (existing) {
+      db.update(weeklyPlans).set({ planData }).where(eq(weeklyPlans.id, existing.id)).run();
+      return this.getWeeklyPlan(userId, weekStartDate)!;
+    }
+    return db.insert(weeklyPlans).values({ userId, weekStartDate, planData }).returning().get();
+  }
+
+  getWeeklyPlanLogs(userId: number, weekStartDate: string): WeeklyPlanLog[] {
+    return db.select().from(weeklyPlanLogs)
+      .where(and(eq(weeklyPlanLogs.userId, userId), eq(weeklyPlanLogs.weekStartDate, weekStartDate)))
+      .all();
+  }
+
+  logWeeklyPlanItem(userId: number, weekStartDate: string, dayIndex: number, sectionKey: string, itemKey: string): WeeklyPlanLog {
+    // Upsert: delete existing then insert
+    db.delete(weeklyPlanLogs).where(
+      and(
+        eq(weeklyPlanLogs.userId, userId),
+        eq(weeklyPlanLogs.weekStartDate, weekStartDate),
+        eq(weeklyPlanLogs.dayIndex, dayIndex),
+        eq(weeklyPlanLogs.sectionKey, sectionKey),
+        eq(weeklyPlanLogs.itemKey, itemKey)
+      )
+    ).run();
+    return db.insert(weeklyPlanLogs).values({ userId, weekStartDate, dayIndex, sectionKey, itemKey }).returning().get();
+  }
+
+  removeWeeklyPlanLog(userId: number, weekStartDate: string, dayIndex: number, sectionKey: string, itemKey: string): void {
+    db.delete(weeklyPlanLogs).where(
+      and(
+        eq(weeklyPlanLogs.userId, userId),
+        eq(weeklyPlanLogs.weekStartDate, weekStartDate),
+        eq(weeklyPlanLogs.dayIndex, dayIndex),
+        eq(weeklyPlanLogs.sectionKey, sectionKey),
+        eq(weeklyPlanLogs.itemKey, itemKey)
+      )
+    ).run();
   }
 }
 

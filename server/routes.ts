@@ -2111,6 +2111,70 @@ Keep each insight under 50 characters. Focus should be under 40 characters. Be e
   });
 
 
+// ==================== WEEKLY PLAN ====================
+
+  app.get("/api/weekly-plan", extractUser, (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      // Get current week's Monday
+      const now = new Date();
+      const day = now.getDay(); // 0=Sun
+      const diffToMon = (day === 0 ? -6 : 1 - day);
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diffToMon);
+      const weekStartDate = monday.toISOString().split("T")[0];
+
+      const saved = storage.getWeeklyPlan(userId, weekStartDate);
+      const logs = storage.getWeeklyPlanLogs(userId, weekStartDate);
+
+      if (saved) {
+        return res.json({
+          weekStartDate,
+          plan: JSON.parse(saved.planData),
+          logs,
+        });
+      }
+
+      // No saved plan — return empty so frontend generates one
+      return res.json({ weekStartDate, plan: null, logs });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
+  app.post("/api/weekly-plan/save", extractUser, (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { weekStartDate, plan } = req.body;
+      if (!weekStartDate || !plan) {
+        return res.status(400).json({ message: "weekStartDate and plan are required" });
+      }
+      const saved = storage.saveWeeklyPlan(userId, weekStartDate, JSON.stringify(plan));
+      return res.json({ success: true, id: saved.id });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
+  app.post("/api/weekly-plan/log", extractUser, (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { weekStartDate, dayIndex, sectionKey, itemKey, completed } = req.body;
+      if (weekStartDate === undefined || dayIndex === undefined || !sectionKey || !itemKey) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      if (completed) {
+        const log = storage.logWeeklyPlanItem(userId, weekStartDate, dayIndex, sectionKey, itemKey);
+        return res.json({ success: true, log });
+      } else {
+        storage.removeWeeklyPlanLog(userId, weekStartDate, dayIndex, sectionKey, itemKey);
+        return res.json({ success: true });
+      }
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
 // ==================== ADMIN AUTH ====================
 
 const ADMIN_JWT_SECRET = process.env.JWT_SECRET || "vitallity-dev-secret-2026";

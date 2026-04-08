@@ -26,6 +26,7 @@ import MilestoneDetail from "@/pages/milestone-detail";
 import DailyLogPage from "@/pages/daily-log";
 import BadgesPage from "@/pages/badges";
 import HealthRecordsPage from "@/pages/health-records";
+import WeeklyPlanPage from "@/pages/weekly-plan";
 import NotFound from "@/pages/not-found";
 import AdminDashboardPage from "@/pages/admin/dashboard";
 import AdminUsersPage from "@/pages/admin/users";
@@ -215,6 +216,7 @@ function AppRouter() {
       <Route path="/daily-log" component={DailyLogPage} />
       <Route path="/badges" component={BadgesPage} />
       <Route path="/health-records" component={HealthRecordsPage} />
+      <Route path="/weekly-plan" component={WeeklyPlanPage} />
       <Route>
         <Redirect to="/" />
       </Route>

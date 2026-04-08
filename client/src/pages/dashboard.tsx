@@ -36,6 +36,7 @@ import {
   Sparkles,
   Send,
   TrendingUp,
+  CalendarDays,
 } from "lucide-react";
 import ChatSheet from "@/components/chat-sheet";
 import {
@@ -1133,6 +1134,22 @@ export default function Dashboard() {
             <p className="text-text-light text-[11px] mt-0.5">Nutrition & wellness</p>
           </button>
         </div>
+
+        {/* My Plan CTA */}
+        <button
+          onClick={() => setLocation("/weekly-plan")}
+          className="w-full glass-card p-4 text-left flex items-center gap-4 active:scale-[0.99] transition-transform border border-primary/20"
+          data-testid="my-plan-cta"
+        >
+          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
+            <CalendarDays className="w-5 h-5 text-green-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-sm font-bold text-foreground">My Plan</p>
+            <p className="text-text-light text-[11px] mt-0.5">Exercise, nutrition & recovery</p>
+          </div>
+          <MoveRight className="w-4 h-4 text-text-light shrink-0" />
+        </button>
 
         {/* Health Records CTA */}
         <button

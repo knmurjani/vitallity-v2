@@ -408,3 +408,31 @@ export const googleAuthSchema = z.object({
 // Health Records types
 export type HealthRecord = typeof healthRecords.$inferSelect;
 export type HealthParameter = typeof healthParameters.$inferSelect;
+
+// ==================== WEEKLY PLAN ====================
+
+export const weeklyPlans = sqliteTable("weekly_plans", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  weekStartDate: text("week_start_date").notNull(),
+  planData: text("plan_data").notNull(), // JSON
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const weeklyPlanLogs = sqliteTable("weekly_plan_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  weekStartDate: text("week_start_date").notNull(),
+  dayIndex: integer("day_index").notNull(), // 0=Mon ... 6=Sun
+  sectionKey: text("section_key").notNull(), // "exercise"|"nutrition"|"stress"|"pain"
+  itemKey: text("item_key").notNull(), // unique key of the checked item
+  completedAt: text("completed_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertWeeklyPlanSchema = createInsertSchema(weeklyPlans).omit({ id: true, createdAt: true });
+export const insertWeeklyPlanLogSchema = createInsertSchema(weeklyPlanLogs).omit({ id: true, completedAt: true });
+
+export type WeeklyPlan = typeof weeklyPlans.$inferSelect;
+export type InsertWeeklyPlan = z.infer<typeof insertWeeklyPlanSchema>;
+export type WeeklyPlanLog = typeof weeklyPlanLogs.$inferSelect;
+export type InsertWeeklyPlanLog = z.infer<typeof insertWeeklyPlanLogSchema>;

@@ -34,6 +34,7 @@ import {
   Plug,
   Sun,
   Moon,
+  Dumbbell,
 } from "lucide-react";
 import AppTour from "@/components/app-tour";
 
@@ -1410,6 +1411,17 @@ export default function Settings() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">MyFitnessPal</p>
               <p className="text-xs text-gray-500">Nutrition sync</p>
+            </div>
+            <span className="text-[10px] font-semibold text-gray-600 bg-gray-200 px-2.5 py-1 rounded-full">Coming Soon</span>
+          </div>
+
+          <div className="flex items-center gap-3" data-testid="hevy-coming-soon">
+            <div className="w-9 h-9 rounded-full bg-[#FF6B35]/10 flex items-center justify-center flex-shrink-0">
+              <Dumbbell className="w-4.5 h-4.5 text-[#FF6B35]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Hevy</p>
+              <p className="text-xs text-gray-500">Sync your workout data</p>
             </div>
             <span className="text-[10px] font-semibold text-gray-600 bg-gray-200 px-2.5 py-1 rounded-full">Coming Soon</span>
           </div>
