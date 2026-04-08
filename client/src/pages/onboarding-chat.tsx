@@ -11,6 +11,51 @@ import bodyBackImg from "@assets/body-back.png";
 import bodyFemaleFrontImg from "@assets/body-female-front.png";
 import bodyFemaleBackImg from "@assets/body-female-back.png";
 
+// Simple markdown renderer for chat messages
+function renderChatMarkdown(text: string) {
+  // Split into lines
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ol key={`ol-${elements.length}`} className="list-decimal list-inside space-y-1.5 my-2">
+          {listItems.map((item, i) => (
+            <li key={i} className="text-sm leading-relaxed">
+              <span dangerouslySetInnerHTML={{ __html: boldify(item) }} />
+            </li>
+          ))}
+        </ol>
+      );
+      listItems = [];
+    }
+  };
+  
+  const boldify = (s: string) => s.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { flushList(); elements.push(<div key={`br-${elements.length}`} className="h-2" />); continue; }
+    
+    // Numbered list: "1. ...", "2. ..."
+    const numMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
+    if (numMatch) { listItems.push(numMatch[2]); continue; }
+    
+    // Bullet list: "- ..." or "* ..."
+    const bulletMatch = trimmed.match(/^[-*]\s+(.+)/);
+    if (bulletMatch) { listItems.push(bulletMatch[1]); continue; }
+    
+    flushList();
+    elements.push(
+      <p key={`p-${elements.length}`} className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: boldify(trimmed) }} />
+    );
+  }
+  flushList();
+  return <>{elements}</>;
+}
+
 // ─── Types ───────────────────────────────────────────────────
 
 interface ChatMessage {
@@ -1094,8 +1139,8 @@ export default function OnboardingChat() {
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-900 leading-relaxed max-w-xs">
-                    {msg.content}
+                  <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-900 leading-relaxed max-w-sm">
+                    {renderChatMarkdown(msg.content)}
                   </div>
 
                   {/* Visual element inline */}
