@@ -199,21 +199,32 @@ function generateWeeklyPlan(profile: any, goals: any[], conditions: any[], painA
   };
 
   // ==================== SLEEP HYGIENE ====================
-  const buildSleep = (goals: any[]): SleepItem[] => {
+  const buildSleep = (goals: any[], prof: any): SleepItem[] => {
     const sleepGoal = goals.find((g: any) =>
       (g.goalType || "").toLowerCase().includes("sleep")
     );
-    const bedtime = sleepGoal ? "10:00 PM" : "10:30 PM";
+    const targetHours = sleepGoal ? 8 : 7;
+    const wakeTime = "6:30 AM";
+    // Calculate bedtime: if target 7hrs and wake 6:30 AM, bed at 11:30 PM
+    const wakeHour = 6.5;
+    const bedHour = (wakeHour - targetHours + 24) % 24;
+    const bedH = Math.floor(bedHour);
+    const bedM = (bedHour - bedH) * 60;
+    const bedAmPm = bedH >= 12 ? "PM" : "AM";
+    const bedH12 = bedH > 12 ? bedH - 12 : bedH === 0 ? 12 : bedH;
+    const bedtime = `${bedH12}:${bedM === 0 ? "00" : "30"} ${bedAmPm}`;
 
     return [
+      { key: "sl-target", text: `Sleep target: ${targetHours} hours (${bedtime} -- ${wakeTime})` },
       { key: "sl-caffeine", text: "No caffeine after 2 PM" },
       { key: "sl-lights", text: "Dim lights 1 hour before bed" },
       { key: "sl-screens", text: "No screens 30 minutes before bed" },
-      { key: "sl-bedtime", text: `Target bedtime: ${bedtime}` },
+      { key: "sl-bedtime", text: `In bed by ${bedtime}` },
+      { key: "sl-wake", text: `Wake up at ${wakeTime} (same time every day)` },
     ];
   };
 
-  const sleepItems = buildSleep(goals);
+  const sleepItems = buildSleep(goals, profileData);
 
   // Nutrition templates
   const vegBreakfasts: Meal[] = [
