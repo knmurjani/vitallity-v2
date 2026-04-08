@@ -1050,6 +1050,8 @@ export default function OnboardingChat() {
       // Complete onboarding
       await authFetch("POST", "/api/onboarding/complete");
       await refreshUser();
+      // Navigate to dashboard
+      navigate("/");
     } catch (err) {
       console.error("[OnboardingChat] completion error:", err);
       setCompletionSaving(false);
