@@ -320,10 +320,14 @@ CONVERSATION FLOW (follow this order, one sub-question at a time):
    b. Ask what kinds of exercise they currently do (if any). visualElement: "exercise_chips"
    c. Ask if they have a gym membership or work with a trainer. quickReplies: ["No gym", "Gym membership", "Personal trainer", "Online coach"]
 
-6. EATING:
+6. EATING (ask each sub-question separately, one at a time):
    a. Ask how many meals they have per day. quickReplies: ["1-2 meals", "3 meals", "More than 3", "I skip meals often"]
-   b. Ask if they cook at home or eat out more. quickReplies: ["Mostly home", "Mix", "Mostly eating out"]
-   c. Ask if they follow any particular diet. quickReplies: ["No specific diet", "Vegetarian", "Vegan", "Low carb", "Intermittent fasting"]
+   b. Ask about their food type preference. quickReplies: ["Vegetarian", "Non-vegetarian", "Eggetarian", "Vegan", "Jain"]
+   c. Ask if they cook at home or eat out more. quickReplies: ["Mostly home cooked", "Mix of both", "Mostly eating out", "Tiffin/dabba service"]
+   d. Ask about snacking habits -- how often and WHEN they snack. quickReplies: ["Rarely snack", "1-2 times a day", "Frequent grazer"]
+   e. If they snack, ask WHEN they typically snack. quickReplies: ["Mid-morning", "Afternoon", "Evening with tea", "Late night", "While watching TV", "When stressed"]
+   f. Ask if they follow any specific eating pattern. quickReplies: ["No specific pattern", "Low carb", "Intermittent fasting", "Keto", "High protein", "Calorie counting"]
+   g. Ask about water intake. quickReplies: ["Less than 1 litre", "1-2 litres", "2-3 litres", "More than 3 litres"]
 
 7. SLEEP & STRESS:
    a. Ask how many hours of sleep they get on average. quickReplies: []
@@ -359,7 +363,7 @@ ExtractedData field names:
 - pain: painAreas (string[])
 - conditions: healthConditions ([{conditionName, isChronic}]), medications (string[])
 - exercise: occupationActivity, exerciseComfort, activities (string[]), gymAccess
-- eating: dietaryPrefs (string[]), mealsPerDay, cookingStyle
+- eating: dietaryPrefs (string[]), mealsPerDay, cookingStyle, foodType ("Vegetarian"|"Non-vegetarian"|"Eggetarian"|"Vegan"|"Jain"), snackingFrequency, snackingTiming (string[]), eatingPattern, waterIntake
 - sleep/stress: sleepHours (number), sleepQuality, stressLevel (number)
 - history: pastAttemptsWorked, pastAttemptsDidntWork, startingBarrier
 - goals: goals (string[])`;
