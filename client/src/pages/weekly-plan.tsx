@@ -11,6 +11,11 @@ import {
   ChevronUp,
   Check,
   Circle,
+  Pill,
+  HeartPulse,
+  Moon,
+  Footprints,
+  Droplets,
 } from "lucide-react";
 
 // ==================== TYPES ====================
@@ -50,14 +55,46 @@ interface PainExercise {
   note: string;
 }
 
+interface MedicationItem {
+  key: string;
+  name: string;
+  dosage: string;
+  timing: "Morning" | "Afternoon" | "Evening";
+}
+
+interface HealthCheck {
+  key: string;
+  name: string;
+  timing: string;
+}
+
+interface SleepItem {
+  key: string;
+  text: string;
+}
+
+interface StepTarget {
+  target: number; // steps
+  dayType: "rest" | "exercise" | "cardio";
+}
+
+interface HydrationTarget {
+  totalMl: number; // total daily target in ml
+}
+
 interface DayPlan {
   label: string; // "Push Day — Chest, Shoulders, Triceps"
   duration: string; // "50-60 min"
   activityType: "exercise" | "recovery" | "rest" | "nutrition";
+  stepTarget: StepTarget;
   exercises: Exercise[];
   nutrition: NutritionDay;
+  hydration: HydrationTarget;
+  medications: MedicationItem[];
+  healthChecks: HealthCheck[];
   stress: StressActivity[];
   pain: PainExercise[];
+  sleep: SleepItem[];
 }
 
 type WeeklyPlan = DayPlan[];
@@ -79,7 +116,7 @@ function getWeekStartDate(): string {
   return monday.toISOString().split("T")[0];
 }
 
-function generateWeeklyPlan(profile: any, goals: any[], conditions: any[], painAreas: any[], activities: any[], dietaryPrefs: any[]): WeeklyPlan {
+function generateWeeklyPlan(profile: any, goals: any[], conditions: any[], painAreas: any[], activities: any[], dietaryPrefs: any[], medications: any[]): WeeklyPlan {
   const hasGym = activities.some((a: any) =>
     ["Gym", "Weight Training", "Gym membership", "Personal trainer"].some(g =>
       (a.activityName || a).toLowerCase().includes(g.toLowerCase())
@@ -96,6 +133,87 @@ function generateWeeklyPlan(profile: any, goals: any[], conditions: any[], painA
 
   const targetCalories = isWeightLoss ? 1700 : isMuscleGain ? 2400 : 2000;
   const targetProtein = isMuscleGain ? 160 : 120;
+
+  // Conditions
+  const conditionNames = conditions.map((c: any) => (c.conditionName || "").toLowerCase());
+  const hasDiabetes = conditionNames.some(c => c.includes("diabetes") || c.includes("diabetic"));
+  const hasHypertension = conditionNames.some(c => c.includes("hypertension") || c.includes("blood pressure") || c.includes("hypert"));
+
+  // Hydration target: weight * 33ml, min 2500ml, capped at 4000ml
+  const weightKg = profile?.weightKg || 0;
+  const hydrationMl = weightKg > 0
+    ? Math.min(4000, Math.max(2500, Math.round(weightKg * 33)))
+    : 2500;
+
+  // ==================== MEDICATIONS ====================
+  const buildMedications = (): MedicationItem[] => {
+    const items: MedicationItem[] = [];
+
+    // Real user medications
+    if (medications && medications.length > 0) {
+      const timings: Array<"Morning" | "Afternoon" | "Evening"> = ["Morning", "Afternoon", "Evening"];
+      medications.forEach((med: any, idx: number) => {
+        items.push({
+          key: `med-${idx}`,
+          name: med.medicationName || med.name || "Medication",
+          dosage: med.dosage || "As prescribed",
+          timing: timings[idx % timings.length],
+        });
+      });
+    }
+
+    // Condition-based supplement suggestions
+    if (hasDiabetes) {
+      items.push({ key: "supp-vitd", name: "Vitamin D", dosage: "1000 IU", timing: "Morning" });
+      items.push({ key: "supp-omega3", name: "Omega-3", dosage: "1000 mg", timing: "Evening" });
+    }
+    if (!hasDiabetes && items.length === 0) {
+      items.push({ key: "supp-multi", name: "Multivitamin", dosage: "1 tablet", timing: "Morning" });
+    }
+
+    return items;
+  };
+
+  const medicationItems = buildMedications();
+
+  // ==================== HEALTH CHECKS ====================
+  const buildHealthChecks = (dayIndex: number): HealthCheck[] => {
+    const checks: HealthCheck[] = [];
+    const isMonday = dayIndex === 0;
+
+    if (hasDiabetes) {
+      checks.push({ key: "hc-fbs", name: "Check fasting blood sugar", timing: "Morning" });
+      checks.push({ key: "hc-pms", name: "Check post-meal blood sugar", timing: "2 hrs after lunch" });
+    }
+    if (hasHypertension) {
+      checks.push({ key: "hc-bpm", name: "Measure blood pressure", timing: "Morning" });
+      checks.push({ key: "hc-bpe", name: "Measure blood pressure", timing: "Evening" });
+    }
+    // General checks
+    if (isMonday) {
+      checks.push({ key: "hc-weigh", name: "Weigh yourself", timing: "Morning (before eating)" });
+    }
+    checks.push({ key: "hc-rhr", name: "Check resting heart rate", timing: "Morning (before getting up)" });
+
+    return checks;
+  };
+
+  // ==================== SLEEP HYGIENE ====================
+  const buildSleep = (goals: any[]): SleepItem[] => {
+    const sleepGoal = goals.find((g: any) =>
+      (g.goalType || "").toLowerCase().includes("sleep")
+    );
+    const bedtime = sleepGoal ? "10:00 PM" : "10:30 PM";
+
+    return [
+      { key: "sl-caffeine", text: "No caffeine after 2 PM" },
+      { key: "sl-lights", text: "Dim lights 1 hour before bed" },
+      { key: "sl-screens", text: "No screens 30 minutes before bed" },
+      { key: "sl-bedtime", text: `Target bedtime: ${bedtime}` },
+    ];
+  };
+
+  const sleepItems = buildSleep(goals);
 
   // Nutrition templates
   const vegBreakfasts: Meal[] = [
@@ -201,32 +319,47 @@ function generateWeeklyPlan(profile: any, goals: any[], conditions: any[], painA
     };
   };
 
-  // Stress activities
+  // Stress activities — varied across 7 days
   const stressActivities: StressActivity[][] = [
+    // Day 0: Monday
     [
       { key: "s1", timing: "Morning", activity: "5-min box breathing", duration: "5 min" },
-      { key: "s2", timing: "Evening", activity: "10-min body scan meditation", duration: "10 min" },
+      { key: "s2", timing: "Midday", activity: "Desk stretch break", duration: "5 min" },
+      { key: "s3", timing: "Evening", activity: "10-min body scan meditation", duration: "10 min" },
     ],
+    // Day 1: Tuesday
     [
-      { key: "s3", timing: "Morning", activity: "Progressive muscle relaxation", duration: "8 min" },
+      { key: "s4", timing: "Morning", activity: "Gratitude journaling — 3 things", duration: "5 min" },
+      { key: "s5", timing: "Midday", activity: "5-min mindful walk outside", duration: "5 min" },
+      { key: "s6", timing: "Evening", activity: "Progressive muscle relaxation", duration: "8 min" },
     ],
+    // Day 2: Wednesday
     [
-      { key: "s4", timing: "Evening", activity: "4-7-8 breathing before sleep", duration: "5 min" },
-      { key: "s5", timing: "Afternoon", activity: "5-min mindful walk outside", duration: "5 min" },
+      { key: "s7", timing: "Morning", activity: "10-min sunlight walk", duration: "10 min" },
+      { key: "s8", timing: "Midday", activity: "Desk stretch break", duration: "5 min" },
+      { key: "s9", timing: "Evening", activity: "4-7-8 breathing before sleep", duration: "5 min" },
     ],
+    // Day 3: Thursday
     [
-      { key: "s6", timing: "Morning", activity: "Gratitude journaling — 3 things", duration: "5 min" },
+      { key: "s10", timing: "Morning", activity: "Deep diaphragmatic breathing", duration: "5 min" },
+      { key: "s11", timing: "Midday", activity: "5-min mindful walk outside", duration: "5 min" },
+      { key: "s12", timing: "Evening", activity: "Guided body scan meditation", duration: "12 min" },
     ],
+    // Day 4: Friday
     [
-      { key: "s7", timing: "Evening", activity: "Guided body scan meditation", duration: "12 min" },
-      { key: "s8", timing: "Morning", activity: "Deep diaphragmatic breathing", duration: "5 min" },
+      { key: "s13", timing: "Morning", activity: "5-min box breathing", duration: "5 min" },
+      { key: "s14", timing: "Morning", activity: "10-min sunlight walk", duration: "10 min" },
+      { key: "s15", timing: "Evening", activity: "Progressive muscle relaxation", duration: "8 min" },
     ],
+    // Day 5: Saturday
     [
-      { key: "s9", timing: "Morning", activity: "10-min yoga nidra", duration: "10 min" },
+      { key: "s16", timing: "Morning", activity: "10-min yoga nidra", duration: "10 min" },
+      { key: "s17", timing: "Midday", activity: "5-min mindful walk outside", duration: "5 min" },
     ],
+    // Day 6: Sunday
     [
-      { key: "s10", timing: "Evening", activity: "Journaling — reflect on the week", duration: "10 min" },
-      { key: "s11", timing: "Morning", activity: "5-min box breathing", duration: "5 min" },
+      { key: "s18", timing: "Morning", activity: "Gratitude journaling — reflect on the week", duration: "10 min" },
+      { key: "s19", timing: "Evening", activity: "4-7-8 breathing before sleep", duration: "5 min" },
     ],
   ];
 
@@ -431,11 +564,24 @@ function generateWeeklyPlan(profile: any, goals: any[], conditions: any[], painA
 
   const exercisePlan = hasGym ? gymPlan : noGymPlan;
 
+  // Step targets based on day type
+  const getStepTarget = (activityType: DayPlan["activityType"], label: string): StepTarget => {
+    const isCardioDay = label.toLowerCase().includes("cardio") || label.toLowerCase().includes("walk") || label.toLowerCase().includes("run");
+    if (activityType === "rest") return { target: 5000, dayType: "rest" };
+    if (isCardioDay) return { target: 10000, dayType: "cardio" };
+    return { target: 8000, dayType: "exercise" };
+  };
+
   return exercisePlan.map((ep, i) => ({
     ...ep,
+    stepTarget: getStepTarget(ep.activityType, ep.label),
     nutrition: makeNutrition(i),
+    hydration: { totalMl: hydrationMl },
+    medications: medicationItems,
+    healthChecks: buildHealthChecks(i),
     stress: stressActivities[i % stressActivities.length],
     pain: activePain.length > 0 ? activePain : [],
+    sleep: sleepItems,
   }));
 }
 
@@ -515,6 +661,53 @@ function CollapsibleSection({
   );
 }
 
+// Hydration widget — 8 buttons each ~300ml, tap to fill blue
+function HydrationWidget({
+  totalMl,
+  filledCount,
+  onToggle,
+}: {
+  totalMl: number;
+  filledCount: number;
+  onToggle: (index: number) => void;
+}) {
+  const cups = 8;
+  const mlPerCup = Math.round(totalMl / cups);
+  const consumedMl = filledCount * mlPerCup;
+  const consumedL = (consumedMl / 1000).toFixed(1);
+  const targetL = (totalMl / 1000).toFixed(1);
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/40">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Hydration</p>
+        <span className="text-xs font-semibold text-blue-600">{consumedL}L / {targetL}L</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-3">Each glass is approx. {mlPerCup} ml. Tap to mark as consumed.</p>
+      <div className="flex gap-2 flex-wrap">
+        {Array.from({ length: cups }).map((_, idx) => {
+          const filled = idx < filledCount;
+          return (
+            <button
+              key={idx}
+              onClick={() => onToggle(idx)}
+              data-testid={`hydration-cup-${idx}`}
+              className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${
+                filled
+                  ? "bg-blue-500 border-blue-500"
+                  : "bg-background border-border/60 hover:border-blue-300"
+              }`}
+              aria-label={`Glass ${idx + 1} ${filled ? "consumed" : "not consumed"}`}
+            >
+              <Droplets className={`w-4 h-4 ${filled ? "text-white" : "text-muted-foreground/50"}`} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ==================== MAIN PAGE ====================
 
 export default function WeeklyPlanPage() {
@@ -527,6 +720,9 @@ export default function WeeklyPlanPage() {
   const [selectedDay, setSelectedDay] = useState<number>(0);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [savingPlan, setSavingPlan] = useState(false);
+
+  // Hydration state: dayIndex -> number of cups filled
+  const [hydrationCups, setHydrationCups] = useState<Record<number, number>>({});
 
   // Load plan on mount
   useEffect(() => {
@@ -567,26 +763,23 @@ export default function WeeklyPlanPage() {
             profileData.painAreas || [],
             profileData.activities || [],
             profileData.dietaryPrefs || [],
+            profileData.medications || [],
           );
           setPlan(generated);
 
           // Save generated plan
-          if (planData.weekStartDate) {
-            setSavingPlan(true);
-            try {
-              await authFetch("POST", "/api/weekly-plan/save", {
-                weekStartDate: planData.weekStartDate,
-                plan: generated,
-              });
-            } catch {
-              // Non-critical
-            } finally {
-              setSavingPlan(false);
-            }
+          setSavingPlan(true);
+          try {
+            await authFetch("POST", "/api/weekly-plan", {
+              weekStartDate: getWeekStartDate(),
+              plan: generated,
+            });
+          } finally {
+            setSavingPlan(false);
           }
         }
       } catch (err) {
-        console.error("Failed to load weekly plan", err);
+        console.error("Failed to load weekly plan:", err);
       } finally {
         setLoading(false);
       }
@@ -594,38 +787,51 @@ export default function WeeklyPlanPage() {
     loadData();
   }, [authFetch]);
 
-  const isChecked = useCallback((dayIndex: number, sectionKey: string, itemKey: string) => {
-    return logs.some(l => l.dayIndex === dayIndex && l.sectionKey === sectionKey && l.itemKey === itemKey);
-  }, [logs]);
+  const isChecked = useCallback(
+    (dayIndex: number, sectionKey: string, itemKey: string) =>
+      logs.some(
+        l => l.dayIndex === dayIndex && l.sectionKey === sectionKey && l.itemKey === itemKey
+      ),
+    [logs]
+  );
 
-  const toggleItem = useCallback(async (dayIndex: number, sectionKey: string, itemKey: string) => {
-    const checked = isChecked(dayIndex, sectionKey, itemKey);
-    const newChecked = !checked;
-
-    // Optimistic update
-    if (newChecked) {
-      setLogs(prev => [...prev, { dayIndex, sectionKey, itemKey }]);
-    } else {
-      setLogs(prev => prev.filter(l => !(l.dayIndex === dayIndex && l.sectionKey === sectionKey && l.itemKey === itemKey)));
-    }
-
-    try {
-      await authFetch("POST", "/api/weekly-plan/log", {
-        weekStartDate,
-        dayIndex,
-        sectionKey,
-        itemKey,
-        completed: newChecked,
-      });
-    } catch {
-      // Revert
+  const toggleItem = useCallback(
+    async (dayIndex: number, sectionKey: string, itemKey: string) => {
+      const newChecked = !isChecked(dayIndex, sectionKey, itemKey);
       if (newChecked) {
-        setLogs(prev => prev.filter(l => !(l.dayIndex === dayIndex && l.sectionKey === sectionKey && l.itemKey === itemKey)));
-      } else {
         setLogs(prev => [...prev, { dayIndex, sectionKey, itemKey }]);
+      } else {
+        setLogs(prev => prev.filter(l => !(l.dayIndex === dayIndex && l.sectionKey === sectionKey && l.itemKey === itemKey)));
       }
-    }
-  }, [isChecked, weekStartDate, authFetch]);
+      try {
+        await authFetch("POST", "/api/weekly-plan/log", {
+          weekStartDate,
+          dayIndex,
+          sectionKey,
+          itemKey,
+          completed: newChecked,
+        });
+      } catch {
+        // Revert
+        if (newChecked) {
+          setLogs(prev => prev.filter(l => !(l.dayIndex === dayIndex && l.sectionKey === sectionKey && l.itemKey === itemKey)));
+        } else {
+          setLogs(prev => [...prev, { dayIndex, sectionKey, itemKey }]);
+        }
+      }
+    },
+    [isChecked, weekStartDate, authFetch]
+  );
+
+  // Toggle a hydration cup for a given day
+  const toggleHydrationCup = useCallback((dayIndex: number, cupIndex: number) => {
+    setHydrationCups(prev => {
+      const current = prev[dayIndex] ?? 0;
+      // If clicking the current last filled cup, unfill it; otherwise fill up to cupIndex+1
+      const newCount = cupIndex < current ? cupIndex : cupIndex + 1;
+      return { ...prev, [dayIndex]: newCount };
+    });
+  }, []);
 
   if (loading) {
     return (
@@ -648,19 +854,29 @@ export default function WeeklyPlanPage() {
 
   const dayPlan = plan[selectedDay];
   const hasPain = dayPlan.pain.length > 0;
+  const hasMedications = dayPlan.medications.length > 0;
+
+  // Step target label helpers
+  const stepTargetLabel = dayPlan.stepTarget.target.toLocaleString();
 
   // Calculate today's completion
   const todayItems = [
+    { sectionKey: "steps", itemKey: "step-target" },
     ...dayPlan.exercises.map(e => ({ sectionKey: "exercise", itemKey: e.key })),
     ...Object.values(dayPlan.nutrition.meals).map(m => ({ sectionKey: "nutrition", itemKey: m.key })),
+    ...dayPlan.medications.map(m => ({ sectionKey: "medication", itemKey: m.key })),
+    ...dayPlan.healthChecks.map(h => ({ sectionKey: "healthcheck", itemKey: h.key })),
     ...dayPlan.stress.map(s => ({ sectionKey: "stress", itemKey: s.key })),
     ...(hasPain ? dayPlan.pain.map(p => ({ sectionKey: "pain", itemKey: p.key })) : []),
+    ...dayPlan.sleep.map(s => ({ sectionKey: "sleep", itemKey: s.key })),
   ];
   const completedToday = todayItems.filter(item =>
     isChecked(selectedDay, item.sectionKey, item.itemKey)
   ).length;
   const totalToday = todayItems.length;
   const progressPct = totalToday > 0 ? Math.round((completedToday / totalToday) * 100) : 0;
+
+  const cupsFilledToday = hydrationCups[selectedDay] ?? 0;
 
   return (
     <div className="min-h-screen bg-background pb-24" data-testid="weekly-plan-page">
@@ -763,6 +979,24 @@ export default function WeeklyPlanPage() {
           defaultOpen={true}
         >
           <div className="divide-y divide-border/40">
+            {/* Step Target row */}
+            <CheckItem
+              itemKey="step-target"
+              checked={isChecked(selectedDay, "steps", "step-target")}
+              onToggle={() => toggleItem(selectedDay, "steps", "step-target")}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Footprints className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Daily Step Goal</p>
+                    <p className="text-[11px] text-muted-foreground capitalize">{dayPlan.stepTarget.dayType} day target</p>
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-foreground flex-shrink-0">{stepTargetLabel}</span>
+              </div>
+            </CheckItem>
+
             {dayPlan.exercises.map((ex) => {
               const checked = isChecked(selectedDay, "exercise", ex.key);
               return (
@@ -843,10 +1077,86 @@ export default function WeeklyPlanPage() {
                 ))}
               </div>
             </div>
+
+            {/* Hydration subsection */}
+            <HydrationWidget
+              totalMl={dayPlan.hydration.totalMl}
+              filledCount={cupsFilledToday}
+              onToggle={(cupIndex) => toggleHydrationCup(selectedDay, cupIndex)}
+            />
           </div>
         </CollapsibleSection>
 
-        {/* C. Stress Management */}
+        {/* C. Medication & Supplements */}
+        <CollapsibleSection
+          title="Medication & Supplements"
+          icon={<Pill className="w-4 h-4" />}
+          iconColor="bg-violet-100 text-violet-700"
+          defaultOpen={false}
+        >
+          {hasMedications ? (
+            <div className="divide-y divide-border/40">
+              {dayPlan.medications.map((med) => {
+                const checked = isChecked(selectedDay, "medication", med.key);
+                return (
+                  <CheckItem
+                    key={med.key}
+                    itemKey={med.key}
+                    checked={checked}
+                    onToggle={() => toggleItem(selectedDay, "medication", med.key)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground leading-snug">{med.name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{med.dosage}</p>
+                      </div>
+                      <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                        med.timing === "Morning"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : med.timing === "Afternoon"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                      }`}>
+                        {med.timing}
+                      </span>
+                    </div>
+                  </CheckItem>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-2">No medications configured.</p>
+          )}
+        </CollapsibleSection>
+
+        {/* D. Health Checks */}
+        <CollapsibleSection
+          title="Health Checks"
+          icon={<HeartPulse className="w-4 h-4" />}
+          iconColor="bg-rose-100 text-rose-700"
+          defaultOpen={false}
+        >
+          <div className="divide-y divide-border/40">
+            {dayPlan.healthChecks.map((hc) => {
+              const checked = isChecked(selectedDay, "healthcheck", hc.key);
+              return (
+                <CheckItem
+                  key={hc.key}
+                  itemKey={hc.key}
+                  checked={checked}
+                  onToggle={() => toggleItem(selectedDay, "healthcheck", hc.key)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground leading-snug flex-1 min-w-0">{hc.name}</p>
+                    <span className="text-[11px] font-medium text-muted-foreground flex-shrink-0 text-right">{hc.timing}</span>
+                  </div>
+                </CheckItem>
+              );
+            })}
+          </div>
+        </CollapsibleSection>
+
+        {/* E. Stress Management */}
         <CollapsibleSection
           title="Stress Management"
           icon={<Brain className="w-4 h-4" />}
@@ -876,7 +1186,7 @@ export default function WeeklyPlanPage() {
           </div>
         </CollapsibleSection>
 
-        {/* D. Pain Management (only if user has pain areas) */}
+        {/* F. Pain Management (only if user has pain areas) */}
         {hasPain && (
           <CollapsibleSection
             title="Pain Management"
@@ -905,6 +1215,30 @@ export default function WeeklyPlanPage() {
             </div>
           </CollapsibleSection>
         )}
+
+        {/* G. Sleep Hygiene */}
+        <CollapsibleSection
+          title="Sleep Hygiene"
+          icon={<Moon className="w-4 h-4" />}
+          iconColor="bg-indigo-100 text-indigo-700"
+          defaultOpen={false}
+        >
+          <div className="divide-y divide-border/40">
+            {dayPlan.sleep.map((item) => {
+              const checked = isChecked(selectedDay, "sleep", item.key);
+              return (
+                <CheckItem
+                  key={item.key}
+                  itemKey={item.key}
+                  checked={checked}
+                  onToggle={() => toggleItem(selectedDay, "sleep", item.key)}
+                >
+                  <p className="text-sm font-semibold text-foreground">{item.text}</p>
+                </CheckItem>
+              );
+            })}
+          </div>
+        </CollapsibleSection>
 
       </div>
     </div>
