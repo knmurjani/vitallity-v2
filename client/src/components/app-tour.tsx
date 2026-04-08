@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuthFetch } from "@/hooks/use-auth";
 import heroAuth from "@assets/hero-auth.jpg";
+import heroAuthDesktop from "@assets/hero-auth-desktop.jpg";
 import tourJournal from "@assets/tour-journal.jpg";
 import tourFood from "@assets/tour-food.jpg";
 import tourFitness from "@assets/tour-fitness.jpg";
@@ -15,6 +16,7 @@ interface AppTourProps {
 const SLIDES = [
   {
     image: heroAuth,
+    desktopImage: heroAuthDesktop,
     title: "Welcome to Vitallity",
     description: "Your personal wellness companion. We learn about you to create a plan that actually works -- not a cookie-cutter program.",
   },
@@ -110,12 +112,14 @@ export default function AppTour({ onComplete }: AppTourProps) {
           className="absolute inset-0 transition-opacity duration-500"
           style={{ opacity: i === current ? 1 : 0 }}
         >
-          <img
-            src={s.image}
-            alt=""
-            className="w-full h-full object-cover"
-            aria-hidden="true"
-          />
+          {(s as any).desktopImage ? (
+            <picture>
+              <source media="(min-width: 768px)" srcSet={(s as any).desktopImage} />
+              <img src={s.image} alt="" className="w-full h-full object-cover" aria-hidden="true" />
+            </picture>
+          ) : (
+            <img src={s.image} alt="" className="w-full h-full object-cover" aria-hidden="true" />
+          )}
         </div>
       ))}
 
