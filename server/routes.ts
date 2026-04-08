@@ -995,25 +995,37 @@ export async function registerRoutes(
 
       try {
         let aiText = aiResponse.trim();
-        // Robust JSON extraction: handle markdown code fences and bare JSON objects
-        try {
-          parsed = JSON.parse(aiText);
-        } catch {
-          const jsonMatch = aiText.match(/```(?:json)?\s*([\s\S]*?)```/);
-          if (jsonMatch) {
-            parsed = JSON.parse(jsonMatch[1].trim());
-          } else {
-            const braceMatch = aiText.match(/\{[\s\S]*\}/);
-            if (braceMatch) {
-              parsed = JSON.parse(braceMatch[0]);
-            } else {
-              throw new Error("Could not parse AI response as JSON");
-            }
+        // Robust JSON extraction: find the first complete JSON object
+        const extractFirstJson = (text: string): any => {
+          // Try direct parse first
+          try { return JSON.parse(text); } catch {}
+          // Try extracting from code fence
+          const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (fenceMatch) { try { return JSON.parse(fenceMatch[1].trim()); } catch {} }
+          // Find first balanced { ... } by counting braces
+          let depth = 0, start = -1;
+          for (let i = 0; i < text.length; i++) {
+            if (text[i] === '{') { if (depth === 0) start = i; depth++; }
+            if (text[i] === '}') { depth--; if (depth === 0 && start >= 0) {
+              try { return JSON.parse(text.substring(start, i + 1)); } catch { start = -1; }
+            }}
           }
+          throw new Error("No valid JSON found");
+        };
+        parsed = extractFirstJson(aiText);
+        // Ensure reply field exists
+        if (!parsed.reply && typeof parsed === 'object') {
+          const text = aiText.replace(/\{[\s\S]*\}/, '').trim();
+          if (text) parsed.reply = text;
         }
       } catch {
+        // If all parsing fails, extract readable text from the response
+        let fallbackReply = aiResponse;
+        // Try to find "reply":"..." in the raw text
+        const replyMatch = aiResponse.match(/"reply"\s*:\s*"([^"]+)"/);
+        if (replyMatch) fallbackReply = replyMatch[1];
         parsed = {
-          reply: aiResponse,
+          reply: fallbackReply,
           quickReplies: [],
           extractedData: {},
           nextTopic: "basics",
