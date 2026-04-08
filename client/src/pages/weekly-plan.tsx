@@ -224,7 +224,7 @@ function generateWeeklyPlan(profile: any, goals: any[], conditions: any[], painA
     ];
   };
 
-  const sleepItems = buildSleep(goals, profileData);
+  const sleepItems = buildSleep(goals, profile);
 
   // Nutrition templates
   const vegBreakfasts: Meal[] = [
