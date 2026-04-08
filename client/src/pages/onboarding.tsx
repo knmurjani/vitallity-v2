@@ -430,6 +430,12 @@ interface OnboardingData {
   eatingChallenges: string[];
   eatingNotes: string;
   dietHistory: string;
+  guiltyPleasures: string[];
+  guiltyPleasuresFrequency: string;
+  restrictedDietExperience: string[];
+  snackingTiming: string[];
+  foodType: string;
+  waterIntake: string;
   // Screen 6: Sleep, Stress & Constraints
   sleepHours: string;
   sleepQuality: string;
@@ -480,6 +486,8 @@ const defaultData: OnboardingData = {
   gymAccess: "", trainerFrequency: "",
   snackingHabit: "", dietaryPrefs: [], customDietPref: "", mealsPerDay: "", cookingStyle: "",
   eatingChallenges: [], eatingNotes: "", dietHistory: "",
+  guiltyPleasures: [], guiltyPleasuresFrequency: "", restrictedDietExperience: [],
+  snackingTiming: [], foodType: "", waterIntake: "",
   sleepHours: "", sleepQuality: "", sleepIssues: [],
   stressLevel: "", stressSources: [],
   constraintChoices: [], constraintOther: "",
@@ -2054,14 +2062,87 @@ function Screen5({ data, update }: { data: OnboardingData; update: <K extends ke
           />
         </div>
 
+        {/* Snacking timing */}
+        <div>
+          <label className="vitallity-label">When do you typically snack?</label>
+          <p className="text-xs text-gray-400 mb-2">Select all that apply</p>
+          <ChipGroup
+            options={[
+              { label: "Mid-morning" }, { label: "Afternoon" }, { label: "Evening with tea/chai" },
+              { label: "Late night" }, { label: "While watching TV" }, { label: "When stressed" },
+              { label: "Not a snacker" },
+            ]}
+            selected={data.snackingTiming}
+            onChange={vals => update("snackingTiming", vals)}
+            multiple
+          />
+        </div>
+
+        {/* Water intake */}
+        <div>
+          <label className="vitallity-label">Daily water intake</label>
+          <ChipGroup
+            options={[
+              { label: "Less than 1L" }, { label: "1-2L" }, { label: "2-3L" }, { label: "More than 3L" }
+            ]}
+            selected={data.waterIntake ? [data.waterIntake] : []}
+            onChange={vals => update("waterIntake", vals[0] || "")}
+          />
+        </div>
+
+        {/* Guilty pleasures */}
+        <div>
+          <label className="vitallity-label">Guilty pleasures</label>
+          <p className="text-xs text-gray-400 mb-2">Everyone has them -- be honest, no judgment. Select all that apply.</p>
+          <ChipGroup
+            options={[
+              { label: "Sweet tooth / desserts" }, { label: "Fried food" }, { label: "Salty snacks / chips" },
+              { label: "Alcohol" }, { label: "Sugary drinks / soda" }, { label: "Late night eating" },
+              { label: "Weekend binge eating" }, { label: "None really" },
+            ]}
+            selected={data.guiltyPleasures}
+            onChange={vals => update("guiltyPleasures", vals)}
+            multiple
+          />
+          {data.guiltyPleasures.length > 0 && !data.guiltyPleasures.includes("None really") && (
+            <div className="mt-3">
+              <label className="vitallity-label">How often?</label>
+              <ChipGroup
+                options={[
+                  { label: "Daily" }, { label: "Few times a week" }, { label: "Weekends only" },
+                  { label: "Occasionally" }, { label: "Rarely but in excess when I do" },
+                ]}
+                selected={data.guiltyPleasuresFrequency ? [data.guiltyPleasuresFrequency] : []}
+                onChange={vals => update("guiltyPleasuresFrequency", vals[0] || "")}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Restricted diet experience */}
+        <div>
+          <label className="vitallity-label">Diet approaches tried or currently using</label>
+          <p className="text-xs text-gray-400 mb-2">Have you tried or are you currently on any of these?</p>
+          <ChipGroup
+            options={[
+              { label: "Intermittent fasting (IF)" }, { label: "CICO (Calories in, calories out)" },
+              { label: "Keto / Low carb" }, { label: "High protein" }, { label: "Calorie counting app" },
+              { label: "Ayurvedic diet" }, { label: "No specific approach" },
+            ]}
+            selected={data.restrictedDietExperience}
+            onChange={vals => update("restrictedDietExperience", vals)}
+            multiple
+          />
+        </div>
+
         {/* Diet History */}
         <div>
-          <label className="vitallity-label">Diet History</label>
+          <label className="vitallity-label">Diet history (optional)</label>
           <textarea
             value={data.dietHistory}
             onChange={e => update("dietHistory", e.target.value)}
-            rows={4}
-            placeholder="Any diets you've tried? Keto, intermittent fasting, calorie counting, Ayurvedic? What was your experience?"
+            rows={3}
+            placeholder="Anything else about your eating history or what's worked / not worked..."
             className="vitallity-input resize-none"
             data-testid="input-diet-history"
           />

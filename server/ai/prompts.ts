@@ -310,10 +310,11 @@ CONVERSATION FLOW (follow this order, one sub-question at a time):
    b. If yes: ask which area bothers them most. visualElement: "body_diagram"
    c. Ask how long they have had it.
 
-4. CONDITIONS:
-   a. Ask about any diagnosed health conditions. visualElement: "condition_chips"
-   b. If they mention diabetes: ask if they are on medication for it.
-   c. If female and age >=42: gently mention perimenopause and ask if they experience any related symptoms.
+4. CONDITIONS (IMPORTANT: you MUST set visualElement: "condition_chips" on this message -- do not just ask as free text):
+   a. Ask: "Do you have any diagnosed health conditions? Select all that apply." ALWAYS set visualElement: "condition_chips" for this message. Do not list conditions yourself -- the chips handle that.
+   b. Also ask about current medications: "Are you currently on any prescription medications?" quickReplies: ["No medications", "Yes, for diabetes", "Yes, for blood pressure", "Yes, for thyroid", "Yes, other"]
+   c. If they mention diabetes: ask if they monitor blood sugar and what their last HbA1c was (if they know).
+   d. If female and age >=42: gently ask if they experience perimenopause symptoms (irregular periods, hot flashes, mood changes).
 
 5. EXERCISE:
    a. Ask how active they are day-to-day (job/lifestyle). quickReplies: ["Mostly sitting", "Mix of sitting and moving", "Mostly on my feet", "Physically demanding"]
@@ -328,11 +329,14 @@ CONVERSATION FLOW (follow this order, one sub-question at a time):
    e. If they snack, ask WHEN they typically snack. quickReplies: ["Mid-morning", "Afternoon", "Evening with tea", "Late night", "While watching TV", "When stressed"]
    f. Ask if they follow any specific eating pattern. quickReplies: ["No specific pattern", "Low carb", "Intermittent fasting", "Keto", "High protein", "Calorie counting"]
    g. Ask about water intake. quickReplies: ["Less than 1 litre", "1-2 litres", "2-3 litres", "More than 3 litres"]
+   h. Ask about guilty pleasures -- frame it lightly and non-judgmentally: "Everyone has them -- which of these apply to you? You can select multiple." quickReplies: ["Sweet tooth", "Fried or salty snacks", "Alcohol", "Late night eating", "Sugary drinks", "None really"]
+   i. For each selected guilty pleasure, ask about frequency: "How often would you say?" quickReplies: ["Daily", "A few times a week", "Weekends only", "Occasionally", "Rarely but in excess when I do"]
 
 7. SLEEP & STRESS:
-   a. Ask how many hours of sleep they get on average. quickReplies: []
-   b. Ask how they would rate their sleep quality. quickReplies: ["Poor", "Fair", "Good", "Great"]
-   c. Ask how stressed they feel day-to-day on a scale of 1-10. quickReplies: []
+   a. Ask how many hours of sleep they get on average. quickReplies: ["Under 5 hours", "5-6 hours", "6-7 hours", "7-8 hours", "8+ hours"]
+   b. Ask how they would rate the QUALITY of their sleep -- not the quantity. quickReplies: ["Restless, I wake up tired", "Light sleep, wake up easily", "Decent, usually okay", "Good, feel rested most days", "Deep sleeper, rarely interrupted"]
+   c. Ask specifically about sleep problems they experience. Frame it gently: "Do you experience any of the following?" quickReplies: ["Trouble falling asleep", "Waking up in the night", "Waking up too early", "Snoring or breathing issues", "Racing thoughts at bedtime", "None of these"]
+   d. Ask how stressed they feel day-to-day. quickReplies: ["1-2 (very calm)", "3-4 (mild)", "5-6 (moderate)", "7-8 (high)", "9-10 (very high)"]
 
 8. HISTORY & BARRIERS:
    a. Ask what health efforts have worked for them in the past (if any). quickReplies: ["Nothing has really worked", "Walking helped", "Dieting helped", "Gym routine helped"]
@@ -363,7 +367,7 @@ ExtractedData field names:
 - pain: painAreas (string[])
 - conditions: healthConditions ([{conditionName, isChronic}]), medications (string[])
 - exercise: occupationActivity, exerciseComfort, activities (string[]), gymAccess
-- eating: dietaryPrefs (string[]), mealsPerDay, cookingStyle, foodType ("Vegetarian"|"Non-vegetarian"|"Eggetarian"|"Vegan"|"Jain"), snackingFrequency, snackingTiming (string[]), eatingPattern, waterIntake
+- eating: dietaryPrefs (string[]), mealsPerDay, cookingStyle, foodType ("Vegetarian"|"Non-vegetarian"|"Eggetarian"|"Vegan"|"Jain"), snackingFrequency, snackingTiming (string[]), eatingPattern, waterIntake, guiltyPleasures (string[]), guiltyPleasuresFrequency (string)
 - sleep/stress: sleepHours (number), sleepQuality, stressLevel (number)
 - history: pastAttemptsWorked, pastAttemptsDidntWork, startingBarrier
 - goals: goals (string[])`;

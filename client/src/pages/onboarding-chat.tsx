@@ -221,12 +221,25 @@ const PAIN_OPTIONS_BACK = [
 const PAIN_OPTIONS = [...PAIN_OPTIONS_FRONT, ...PAIN_OPTIONS_BACK, "Full Body", "None"];
 
 const HEALTH_CONDITIONS = [
-  "Type 2 Diabetes", "Type 1 Diabetes", "Hypertension",
-  "Heart Condition", "Thyroid", "PCOD/PCOS", "Fibromyalgia",
-  "Arthritis", "Chronic Back Pain", "Knee Issues",
-  "IBS/Digestive Issues", "Chronic Migraine", "Depression/Anxiety",
-  "Sleep Apnea", "Sciatica", "Acid Reflux/GERD",
-  "Asthma", "Burnout", "Perimenopause", "None currently",
+  // Metabolic
+  "Type 2 Diabetes", "Type 1 Diabetes", "Pre-diabetes", "High Cholesterol",
+  // Cardiovascular
+  "Hypertension (High BP)", "Heart Condition",
+  // Hormonal
+  "Thyroid (Hypo)", "Thyroid (Hyper)", "PCOD/PCOS", "Perimenopause", "Menopause",
+  // Respiratory
+  "Asthma", "Sleep Apnea",
+  // Musculoskeletal
+  "Arthritis", "Osteoporosis", "Fibromyalgia", "Chronic Back Pain",
+  "Sciatica", "Cervical Spondylosis", "Lumbar Spondylosis", "Knee Issues",
+  // Digestive
+  "IBS/Digestive Issues", "Acid Reflux/GERD", "Celiac Disease", "Crohn's Disease",
+  // Mental Health
+  "Anxiety", "Depression", "OCD", "PTSD", "ADHD",
+  // Other
+  "Chronic Migraine", "Chronic Fatigue", "Kidney Issues", "Liver Issues",
+  "Autoimmune Condition", "Cancer (in remission)", "Burnout",
+  "None currently",
 ];
 
 const EXERCISE_OPTIONS = [
@@ -397,33 +410,45 @@ function ConditionChipsVisual({ onSelect }: { onSelect: (conditions: string[]) =
     );
   };
 
+  const CATEGORIES = [
+    { label: "Metabolic", items: ["Type 2 Diabetes", "Type 1 Diabetes", "Pre-diabetes", "High Cholesterol"] },
+    { label: "Cardiovascular", items: ["Hypertension (High BP)", "Heart Condition"] },
+    { label: "Hormonal", items: ["Thyroid (Hypo)", "Thyroid (Hyper)", "PCOD/PCOS", "Perimenopause", "Menopause"] },
+    { label: "Respiratory", items: ["Asthma", "Sleep Apnea"] },
+    { label: "Musculoskeletal", items: ["Arthritis", "Osteoporosis", "Fibromyalgia", "Chronic Back Pain", "Sciatica", "Cervical Spondylosis", "Lumbar Spondylosis", "Knee Issues"] },
+    { label: "Digestive", items: ["IBS/Digestive Issues", "Acid Reflux/GERD", "Celiac Disease", "Crohn's Disease"] },
+    { label: "Mental Health", items: ["Anxiety", "Depression", "OCD", "PTSD", "ADHD"] },
+    { label: "Other", items: ["Chronic Migraine", "Chronic Fatigue", "Kidney Issues", "Liver Issues", "Autoimmune Condition", "Cancer (in remission)", "Burnout"] },
+  ];
+
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-4 my-3" data-testid="visual-condition-chips">
       <p className="text-xs text-gray-500 mb-3 font-medium">Select any conditions that apply</p>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {HEALTH_CONDITIONS.map(c => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => toggle(c)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              selected.includes(c)
-                ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-            data-testid={`condition-${c.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}
-          >
-            {c}
-          </button>
+      <div className="space-y-3 mb-4">
+        {CATEGORIES.map(cat => (
+          <div key={cat.label}>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">{cat.label}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {cat.items.map(c => (
+                <button key={c} type="button" onClick={() => toggle(c)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                    selected.includes(c) ? "bg-primary text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                  data-testid={`condition-${c.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={() => onSelect(selected)}
-        className="w-full py-2 rounded-xl text-sm font-semibold bg-primary text-white"
-        data-testid="condition-chips-confirm"
-      >
-        {selected.length === 0 ? "None of these apply" : `Confirm ${selected.length} condition${selected.length > 1 ? "s" : ""}`}
+      {selected.length > 0 && (
+        <p className="text-[10px] text-primary mb-2 font-medium">Selected: {selected.join(", ")}</p>
+      )}
+      <button type="button" onClick={() => onSelect(selected.length > 0 ? selected : ["None currently"])}
+        className="w-full py-2.5 rounded-xl text-sm font-semibold bg-primary text-white"
+        data-testid="condition-chips-confirm">
+        {selected.length === 0 ? "No conditions -- continue" : `Confirm ${selected.length} condition${selected.length > 1 ? "s" : ""}`}
       </button>
     </div>
   );
