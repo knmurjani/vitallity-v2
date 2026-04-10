@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth, useAuthFetch } from "@/hooks/use-auth";
+import { generateGlidePath, type GlidepathInput } from "@shared/glidepath";
 import {
   ArrowLeft, Send, Mic, MicOff, Sparkles, Loader2,
   MessageCircle, Check, AlertTriangle, Eye, Star,
@@ -146,7 +147,9 @@ const STAGES = [
   { key: "eating", label: "Lifestyle" },
   { key: "sleep_stress", label: "Lifestyle" },
   { key: "history", label: "History" },
+  { key: "aspirations", label: "Goals" },
   { key: "goals", label: "Goals" },
+  { key: "accountability", label: "Goals" },
   { key: "complete", label: "Summary" },
 ];
 
@@ -156,7 +159,7 @@ const DISPLAY_STAGES = [
   { keys: ["pain", "conditions"], label: "Health" },
   { keys: ["exercise", "eating", "sleep_stress"], label: "Lifestyle" },
   { keys: ["history"], label: "History" },
-  { keys: ["goals"], label: "Goals" },
+  { keys: ["aspirations", "goals", "accountability"], label: "Goals" },
   { keys: ["complete"], label: "Summary" },
 ];
 
@@ -582,6 +585,32 @@ function GoalSelectorVisual({ onSelect }: { onSelect: (goals: string[]) => void 
   );
 }
 
+function MilestoneTimelineVisual({ onSelect }: { onSelect: (milestones: unknown[]) => void }) {
+  // This visual is display-only - the AI has already proposed milestones in the chat text.
+  // It provides a visual confirmation that milestones were understood.
+  const [confirmed, setConfirmed] = useState(false);
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-4 my-3" data-testid="visual-milestone-timeline">
+      <p className="text-xs text-gray-500 mb-3 font-medium">Your milestone plan has been outlined above. Review it and confirm.</p>
+      <button
+        type="button"
+        onClick={() => {
+          setConfirmed(true);
+          onSelect([]);
+        }}
+        disabled={confirmed}
+        className={`w-full py-2 rounded-xl text-sm font-semibold transition-opacity ${
+          confirmed ? "bg-green-600 text-white" : "bg-primary text-white"
+        }`}
+        data-testid="milestone-timeline-confirm"
+      >
+        {confirmed ? "Milestones confirmed" : "Looks good, let's go"}
+      </button>
+    </div>
+  );
+}
+
 function BmiGaugeVisual({ heightCm, weightKg }: { heightCm: number; weightKg: number }) {
   const bmi = weightKg / Math.pow(heightCm / 100, 2);
   const bmiCategory = bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : bmi < 35 ? "Obese" : "Severely Obese";
@@ -790,6 +819,11 @@ export default function OnboardingChat() {
           if (d.painAreas) merged.painAreas = d.painAreas as string[];
           if (d.activities) merged.activities = d.activities as string[];
           if (d.goals) merged.goals = d.goals as string[];
+          if ((d as any).targetWeight) merged.targetWeightKg = Number((d as any).targetWeight);
+          if ((d as any).goalTimeline) (merged as any).weightTimeline = String((d as any).goalTimeline);
+          if ((d as any).milestones) (merged as any).milestones = (d as any).milestones;
+          if ((d as any).priorityGoal) (merged as any).priorityGoal = String((d as any).priorityGoal);
+          if ((d as any).accountabilityPreference) (merged as any).accountabilityPreference = String((d as any).accountabilityPreference);
           if (d.dietaryPrefs) merged.dietaryPrefs = d.dietaryPrefs as string[];
           if (d.stressSources) merged.stressSources = d.stressSources as string[];
           if (d.sleepIssues) merged.sleepIssues = d.sleepIssues as string[];
@@ -924,6 +958,8 @@ export default function OnboardingChat() {
       const goals = value as string[];
       messageText = `My goals are: ${goals.join(", ")}.`;
       setCurrentData(prev => ({ ...prev, goals }));
+    } else if (visualType === "milestone_timeline") {
+      messageText = "The milestones look good, let's continue.";
     }
 
     if (messageText) {
@@ -1044,8 +1080,44 @@ export default function OnboardingChat() {
       await authFetch("POST", "/api/onboarding/step/8", {
         goals: currentData.goals,
         targetWeightKg: currentData.targetWeightKg,
-        weightTimeline: currentData.weightTimeline,
+        weightTimeline: (currentData as any).weightTimeline,
       });
+
+      // Generate evidence-based milestones using the same logic as form-based onboarding
+      // This ensures both paths produce identical quality milestones
+      const glidepathInput: GlidepathInput = {
+        weightKg: currentData.weightKg,
+        heightCm: currentData.heightCm,
+        age: currentData.age?.toString() || "30",
+        gender: currentData.gender || "Male",
+        targetWeightKg: currentData.targetWeightKg || 0,
+        weightTimeline: (currentData as any).weightTimeline || "3 months",
+        goals: currentData.goals || [],
+        painAreas: currentData.painAreas || [],
+        activities: currentData.activities || [],
+        healthConditions: currentData.healthConditions?.map(c => ({
+          condition: typeof c === 'string' ? c : (c.condition || ''),
+          duration: typeof c === 'string' ? '' : (c.duration || ''),
+          notes: typeof c === 'string' ? '' : (c.notes || ''),
+        })) || [],
+        exerciseComfort: currentData.exerciseComfort || "",
+        exerciseHistoryOption: (currentData as any).exerciseHistoryOption || "",
+        sleepHours: currentData.sleepHours?.toString() || "6-7 hours",
+        sleepQuality: (currentData as any).sleepQuality || "Fair",
+        sleepIssues: (currentData as any).sleepIssues || [],
+        stressLevel: (currentData as any).stressLevel?.toString() || "5",
+        stressSources: (currentData as any).stressSources || [],
+        nutritionKnowledge: (currentData as any).nutritionKnowledge || "5",
+        selfDiscipline: (currentData as any).selfDiscipline || "5",
+        consistencyHistory: (currentData as any).consistencyHistory || "5",
+      };
+
+      const generatedMilestones = generateGlidePath(glidepathInput);
+      if (generatedMilestones.length > 0) {
+        await authFetch("POST", "/api/onboarding/step/10", {
+          milestones: generatedMilestones,
+        });
+      }
 
       // Complete onboarding
       await authFetch("POST", "/api/onboarding/complete");
@@ -1170,6 +1242,11 @@ export default function OnboardingChat() {
                   {msg.visualElement === "goal_selector" && (
                     <GoalSelectorVisual
                       onSelect={(goals) => handleVisualSelect("goal_selector", goals)}
+                    />
+                  )}
+                  {msg.visualElement === "milestone_timeline" && (
+                    <MilestoneTimelineVisual
+                      onSelect={(milestones) => handleVisualSelect("milestone_timeline", milestones)}
                     />
                   )}
                   {msg.visualElement === "bmi_gauge" && currentData.heightCm > 0 && currentData.weightKg > 0 && (

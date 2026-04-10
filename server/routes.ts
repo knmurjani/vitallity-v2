@@ -1,15 +1,16 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage, rawDb, dbFilePath } from "./storage";
+import { storage, rawDb, dbFilePath, db } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import fs from "fs";
-import { signupSchema, loginSchema, googleAuthSchema, phoneOtpRequestSchema, phoneOtpVerifySchema } from "@shared/schema";
+import { signupSchema, loginSchema, googleAuthSchema, phoneOtpRequestSchema, phoneOtpVerifySchema, userGoals } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { searchFoods } from "@shared/foods";
 import { callHaiku } from "./ai/haiku";
 import { callSonnet } from "./ai/sonnet";
 import { callOpus } from "./ai/opus";
-import { getUserContext, buildInsightSystemPrompt, buildChatSystemPrompt, buildMotivationPrompt, buildWeeklyReviewPrompt, buildHealthSummarySystemPrompt, buildOnboardingChatSystemPrompt } from "./ai/prompts";
+import { getUserContext, buildInsightSystemPrompt, buildChatSystemPrompt, buildMotivationPrompt, buildWeeklyReviewPrompt, buildHealthSummarySystemPrompt, buildOnboardingChatSystemPrompt, buildCoachingSystemPrompt, buildGoalAdjustmentPrompt } from "./ai/prompts";
 import { getHealthContext, getCalibrationContext, computeCalibrationAdjustment } from "./ai/health-context";
 import { checkAndAwardBadges } from "./badges";
 import { handleTelegramWebhook, isTelegramConfigured, sendReminders } from "./telegram";
@@ -422,15 +423,49 @@ export async function registerRoutes(
           break;
         }
         case 8: {
-          // Goals
+          // Goals - normalize to array of objects
           if (body.goals) {
-            storage.saveGoals(userId, body.goals);
+            const goalObjects = body.goals.map((g: any) => 
+              typeof g === 'string' ? { goalType: g } : g
+            );
+            storage.saveGoals(userId, goalObjects);
           }
           storage.saveProfile(userId, {
             customGoal: body.customGoal,
             targetWeightKg: body.targetWeightKg,
             weightTimeline: body.weightTimeline,
           });
+          // Auto-generate glidepaths for ALL goal types
+          const goals = storage.getGoals(userId);
+          const profile = storage.getProfile(userId);
+          for (const goal of goals) {
+            const timelineStr = body.weightTimeline || "3 months";
+            const weeksMatch = timelineStr.match(/(\d+)\s*(week|month|year)/i);
+            let weeks = 12;
+            if (weeksMatch) {
+              const unit = weeksMatch[2]?.toLowerCase();
+              if (unit?.startsWith("year")) weeks = parseInt(weeksMatch[1]) * 52;
+              else if (unit?.startsWith("month")) weeks = parseInt(weeksMatch[1]) * 4;
+              else weeks = parseInt(weeksMatch[1]);
+            }
+
+            if (goal.goalType === "Lose Weight" && body.targetWeightKg && profile?.weightKg) {
+              storage.generateGlidepath(userId, goal.id, profile.weightKg, body.targetWeightKg, weeks, "weight_kg");
+            } else if (goal.goalType === "Better Sleep") {
+              // Sleep glidepath: track sleep hours (target 7-8)
+              const currentSleep = profile?.sleepStress?.match(/(\d+\.?\d*)/)?.[1] || "6";
+              storage.generateGlidepath(userId, goal.id, parseFloat(currentSleep), 7.5, weeks, "sleep_hours");
+            } else if (goal.goalType === "Reduce Pain") {
+              // Pain glidepath: pain level 8 -> 3
+              storage.generateGlidepath(userId, goal.id, 7, 3, weeks, "pain_level");
+            } else if (goal.goalType === "Manage Stress") {
+              // Stress glidepath: stress level 8 -> 4
+              storage.generateGlidepath(userId, goal.id, 7, 3, weeks, "stress_level");
+            } else if (goal.goalType === "Build Strength") {
+              // Strength: track sessions completed (0 -> target)
+              storage.generateGlidepath(userId, goal.id, 0, weeks <= 14 ? 24 : 36, weeks, "strength_sessions");
+            }
+          }
           break;
         }
         case 9: {
@@ -2185,6 +2220,224 @@ Keep each insight under 50 characters. Focus should be under 40 characters. Be e
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Server error" });
     }
+  });
+
+// ==================== COACHING THREADS & GLIDEPATH ====================
+
+  // Get all coaching threads for user
+  app.get("/api/coaching/threads", extractUser, (req: Request, res: Response) => {
+    const threads = storage.getCoachingThreads(req.user!.id);
+    res.json({ threads });
+  });
+
+  // Get messages for a thread
+  app.get("/api/coaching/threads/:threadId/messages", extractUser, (req: Request, res: Response) => {
+    const threadId = parseInt(req.params.threadId as string);
+    const thread = storage.getCoachingThread(threadId);
+    if (!thread || thread.userId !== req.user!.id) {
+      return res.status(404).json({ message: "Thread not found" });
+    }
+    const messages = storage.getCoachingMessages(threadId);
+    res.json({ thread, messages });
+  });
+
+  // Send message in a coaching thread (AI responds)
+  app.post("/api/coaching/threads/:threadId/message", extractUser, async (req: Request, res: Response) => {
+    try {
+      const threadId = parseInt(req.params.threadId as string);
+      const thread = storage.getCoachingThread(threadId);
+      if (!thread || thread.userId !== req.user!.id) {
+        return res.status(404).json({ message: "Thread not found" });
+      }
+
+      const userId = req.user!.id;
+      const { message } = req.body;
+
+      // Save user message
+      storage.addCoachingMessage(threadId, userId, "user", message);
+
+      // Build context for AI
+      const ctx = getUserContext(userId);
+      const history = storage.getCoachingMessages(threadId);
+      const recentMessages = history.slice(-20); // last 20 messages for context
+
+      // Build system prompt based on thread topic
+      let systemPrompt = buildCoachingSystemPrompt(ctx, thread.topic, thread.goalId);
+
+      const conversationMessages = recentMessages.map(m => ({
+        role: m.role === "user" ? "user" as const : "assistant" as const,
+        content: m.content,
+      }));
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: conversationMessages,
+        }),
+      });
+
+      const aiData = await response.json() as any;
+      const aiReply = aiData.content?.[0]?.text || "I'm here to help. Could you tell me more?";
+
+      // Parse for goal adjustment proposals
+      let metadata: string | undefined;
+      const adjustMatch = aiReply.match(/\[GOAL_ADJUST\]([\s\S]*?)\[\/GOAL_ADJUST\]/);
+      if (adjustMatch) {
+        metadata = adjustMatch[1].trim();
+      }
+
+      // Save AI response
+      const aiMsg = storage.addCoachingMessage(threadId, userId, "assistant", aiReply.replace(/\[GOAL_ADJUST\][\s\S]*?\[\/GOAL_ADJUST\]/, "").trim(), metadata);
+
+      res.json({ reply: aiMsg });
+    } catch (err: any) {
+      console.error("[Coaching] error:", err);
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
+  // Create or get a topic thread
+  app.post("/api/coaching/threads", extractUser, (req: Request, res: Response) => {
+    const { topic, goalId } = req.body;
+    const thread = storage.getOrCreateTopicThread(req.user!.id, topic, goalId);
+    res.json({ thread });
+  });
+
+  // Request goal adjustment (starts coaching conversation)
+  app.post("/api/coaching/adjust-goal/:goalId", extractUser, async (req: Request, res: Response) => {
+    try {
+      const goalId = parseInt(req.params.goalId as string);
+      const userId = req.user!.id;
+      const { reason, context: adjustContext } = req.body; // "sick", "travel", "plateau", etc.
+
+      // Create/get a goal adjustment thread
+      const thread = storage.getOrCreateTopicThread(userId, "goal_adjustment", goalId);
+
+      // Add system context about the adjustment request
+      const goal = storage.getGoals(userId).find(g => g.id === goalId);
+      const milestonesList = storage.getMilestones(userId).filter((m: any) => m.goalId === goalId);
+      const glidepath = storage.getGlidepathSnapshots(userId, goalId);
+
+      const systemMsg = `User is requesting a goal adjustment for "${goal?.goalType || "Unknown"}".
+Reason: ${reason || "Not specified"}
+Context: ${adjustContext || "None provided"}
+Current target: ${goal?.targetValue || "Not set"}
+Current timeline: ${goal?.targetTimeline || "Not set"}
+Milestones: ${milestonesList.map((m: any) => `${m.title} (${m.status})`).join(", ") || "None"}
+Glidepath data points: ${glidepath.length}`;
+
+      storage.addCoachingMessage(thread.id, userId, "system", systemMsg);
+
+      // Get AI coaching response
+      const ctx = getUserContext(userId);
+      const coachPrompt = buildGoalAdjustmentPrompt(ctx, goal, reason, adjustContext);
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          system: coachPrompt,
+          messages: [{ role: "user", content: `I need to adjust my goal. Reason: ${reason}. ${adjustContext || ""}` }],
+        }),
+      });
+
+      const aiData = await response.json() as any;
+      const aiReply = aiData.content?.[0]?.text || "Let's talk about what's going on and how we can adjust your plan.";
+
+      const aiMsg = storage.addCoachingMessage(thread.id, userId, "assistant", aiReply);
+
+      res.json({ thread, reply: aiMsg });
+    } catch (err: any) {
+      console.error("[GoalAdjust] error:", err);
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
+  // Apply goal adjustment (after AI coaching approval)
+  app.post("/api/coaching/apply-adjustment/:goalId", extractUser, (req: Request, res: Response) => {
+    try {
+      const goalId = parseInt(req.params.goalId as string);
+      const userId = req.user!.id;
+      const { newTarget, newTimeline, reason, reasonText } = req.body;
+
+      // Update goal
+      const goals = storage.getGoals(userId);
+      const goal = goals.find(g => g.id === goalId);
+      if (!goal) return res.status(404).json({ message: "Goal not found" });
+
+      // Find associated milestones and log the adjustment
+      const milestonesList = storage.getMilestones(userId).filter((m: any) => m.goalId === goalId);
+      for (const m of milestonesList) {
+        storage.addMilestoneHistoryEntry(m.id, userId, "adjusted", {
+          oldTarget: m.target || undefined,
+          newTarget: newTarget,
+          oldTimeframe: m.timeframe || undefined,
+          newTimeframe: newTimeline,
+          reasonCategory: reason,
+          reasonText: reasonText,
+        });
+      }
+
+      // Update the goal itself
+      db.update(userGoals).set({
+        targetValue: newTarget,
+        targetTimeline: newTimeline,
+      }).where(eq(userGoals.id, goalId)).run();
+
+      // Regenerate glidepath if we have the data
+      const profile = storage.getProfile(userId);
+      if (goal.goalType === "Lose Weight" && profile?.weightKg && newTarget) {
+        const weeks = parseInt(newTimeline) || 20;
+        storage.generateGlidepath(userId, goalId, profile.weightKg, parseFloat(newTarget), weeks, "weight_kg");
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Server error" });
+    }
+  });
+
+  // Get glidepath data for a goal
+  app.get("/api/goals/:goalId/glidepath", extractUser, (req: Request, res: Response) => {
+    const goalId = parseInt(req.params.goalId as string);
+    const snapshots = storage.getGlidepathSnapshots(req.user!.id, goalId);
+    res.json({ snapshots });
+  });
+
+  // Get goals with glidepath summary
+  app.get("/api/goals/tracking", extractUser, (req: Request, res: Response) => {
+    const userId = req.user!.id;
+    const goals = storage.getGoals(userId);
+    const milestonesList = storage.getMilestones(userId);
+    const threads = storage.getCoachingThreads(userId);
+
+    const goalsWithTracking = goals.map(g => {
+      const goalMilestones = milestonesList.filter((m: any) => m.goalId === g.id);
+      const glidepath = storage.getGlidepathSnapshots(userId, g.id);
+      const goalThreads = threads.filter(t => t.goalId === g.id || t.topic === g.goalType.toLowerCase().replace(/ /g, "_"));
+      return {
+        ...g,
+        milestones: goalMilestones,
+        glidepath,
+        threads: goalThreads,
+      };
+    });
+
+    res.json({ goals: goalsWithTracking });
   });
 
 // ==================== ADMIN AUTH ====================

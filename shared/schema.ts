@@ -409,6 +409,45 @@ export const googleAuthSchema = z.object({
 export type HealthRecord = typeof healthRecords.$inferSelect;
 export type HealthParameter = typeof healthParameters.$inferSelect;
 
+// ==================== COACHING THREADS ====================
+
+export const coachingThreads = sqliteTable("coaching_threads", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  topic: text("topic").notNull(), // "weight", "pain", "sleep", "stress", "nutrition", "fitness", "general", "goal_adjustment"
+  goalId: integer("goal_id"), // optional link to specific goal
+  title: text("title").notNull(), // display title like "Weight Loss Journey" or "Managing Back Pain"
+  status: text("status").default("active"), // "active" | "resolved" | "archived"
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  lastMessageAt: text("last_message_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const coachingMessages = sqliteTable("coaching_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  threadId: integer("thread_id").notNull(),
+  userId: integer("user_id").notNull(),
+  role: text("role").notNull(), // "user" | "assistant" | "system"
+  content: text("content").notNull(),
+  metadata: text("metadata"), // JSON: goal_adjustment proposals, etc.
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Glidepath snapshots track actual vs planned progress over time
+export const glidepathSnapshots = sqliteTable("glidepath_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  goalId: integer("goal_id").notNull(),
+  date: text("date").notNull(), // ISO date
+  plannedValue: real("planned_value"), // where they should be on the glidepath
+  actualValue: real("actual_value"), // where they actually are
+  metric: text("metric").notNull(), // "weight_kg", "pain_level", "sleep_hours", "stress_level", etc.
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export type CoachingThread = typeof coachingThreads.$inferSelect;
+export type CoachingMessage = typeof coachingMessages.$inferSelect;
+export type GlidepathSnapshot = typeof glidepathSnapshots.$inferSelect;
+
 // ==================== WEEKLY PLAN ====================
 
 export const weeklyPlans = sqliteTable("weekly_plans", {

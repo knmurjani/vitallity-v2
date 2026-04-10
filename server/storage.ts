@@ -53,6 +53,12 @@ import {
   healthParameters,
   weeklyPlans,
   weeklyPlanLogs,
+  coachingThreads,
+  coachingMessages,
+  glidepathSnapshots,
+  type CoachingThread,
+  type CoachingMessage,
+  type GlidepathSnapshot,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -401,6 +407,43 @@ function ensureTables() {
     );
   `);
 
+  // Coaching threads
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS coaching_threads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      topic TEXT NOT NULL,
+      goal_id INTEGER,
+      title TEXT NOT NULL,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      last_message_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS coaching_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      thread_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      metadata TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS glidepath_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      goal_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      planned_value REAL,
+      actual_value REAL,
+      metric TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // Add columns to users if missing (for upgrades)
   const addCol = (col: string, type: string) => {
     try { sqlite.exec(`ALTER TABLE users ADD COLUMN ${col} ${type}`); } catch {}
@@ -627,6 +670,20 @@ export interface IStorage {
   getWeeklyPlanLogs(userId: number, weekStartDate: string): WeeklyPlanLog[];
   logWeeklyPlanItem(userId: number, weekStartDate: string, dayIndex: number, sectionKey: string, itemKey: string): WeeklyPlanLog;
   removeWeeklyPlanLog(userId: number, weekStartDate: string, dayIndex: number, sectionKey: string, itemKey: string): void;
+
+  // Coaching Threads
+  createCoachingThread(userId: number, topic: string, title: string, goalId?: number): CoachingThread;
+  getCoachingThreads(userId: number): CoachingThread[];
+  getCoachingThread(threadId: number): CoachingThread | undefined;
+  addCoachingMessage(threadId: number, userId: number, role: string, content: string, metadata?: string): CoachingMessage;
+  getCoachingMessages(threadId: number): CoachingMessage[];
+  updateCoachingThreadStatus(threadId: number, status: string): void;
+  getOrCreateTopicThread(userId: number, topic: string, goalId?: number): CoachingThread;
+
+  // Glidepath
+  addGlidepathSnapshot(userId: number, goalId: number, date: string, metric: string, plannedValue: number | null, actualValue: number | null): GlidepathSnapshot;
+  getGlidepathSnapshots(userId: number, goalId: number): GlidepathSnapshot[];
+  generateGlidepath(userId: number, goalId: number, startValue: number, targetValue: number, weeks: number, metric: string): void;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1539,6 +1596,124 @@ export class DatabaseStorage implements IStorage {
         eq(weeklyPlanLogs.itemKey, itemKey)
       )
     ).run();
+  }
+
+  // ─── Coaching Threads ──────────────────────────────────────
+
+  createCoachingThread(userId: number, topic: string, title: string, goalId?: number): CoachingThread {
+    return db.insert(coachingThreads).values({
+      userId, topic, title, goalId: goalId || null,
+    }).returning().get();
+  }
+
+  getCoachingThreads(userId: number): CoachingThread[] {
+    return db.select().from(coachingThreads)
+      .where(eq(coachingThreads.userId, userId))
+      .orderBy(desc(coachingThreads.lastMessageAt))
+      .all();
+  }
+
+  getCoachingThread(threadId: number): CoachingThread | undefined {
+    return db.select().from(coachingThreads)
+      .where(eq(coachingThreads.id, threadId))
+      .get();
+  }
+
+  addCoachingMessage(threadId: number, userId: number, role: string, content: string, metadata?: string): CoachingMessage {
+    // Update thread's last_message_at
+    db.update(coachingThreads)
+      .set({ lastMessageAt: new Date().toISOString() })
+      .where(eq(coachingThreads.id, threadId))
+      .run();
+    return db.insert(coachingMessages).values({
+      threadId, userId, role, content, metadata: metadata || null,
+    }).returning().get();
+  }
+
+  getCoachingMessages(threadId: number): CoachingMessage[] {
+    return db.select().from(coachingMessages)
+      .where(eq(coachingMessages.threadId, threadId))
+      .orderBy(asc(coachingMessages.createdAt))
+      .all();
+  }
+
+  updateCoachingThreadStatus(threadId: number, status: string): void {
+    db.update(coachingThreads).set({ status }).where(eq(coachingThreads.id, threadId)).run();
+  }
+
+  getOrCreateTopicThread(userId: number, topic: string, goalId?: number): CoachingThread {
+    // Find existing active thread for this topic
+    const existing = db.select().from(coachingThreads)
+      .where(and(
+        eq(coachingThreads.userId, userId),
+        eq(coachingThreads.topic, topic),
+        eq(coachingThreads.status, "active"),
+      ))
+      .orderBy(desc(coachingThreads.lastMessageAt))
+      .get();
+    if (existing) return existing;
+
+    // Create new thread with topic-specific title
+    const titles: Record<string, string> = {
+      weight: "Weight Loss Journey",
+      pain: "Pain Management",
+      sleep: "Sleep Improvement",
+      stress: "Stress Management",
+      nutrition: "Nutrition Guidance",
+      fitness: "Fitness Progress",
+      general: "General Wellness",
+      goal_adjustment: "Goal Adjustment",
+    };
+    return this.createCoachingThread(userId, topic, titles[topic] || "Coaching", goalId);
+  }
+
+  // ─── Glidepath ─────────────────────────────────────────────
+
+  addGlidepathSnapshot(userId: number, goalId: number, date: string, metric: string, plannedValue: number | null, actualValue: number | null): GlidepathSnapshot {
+    // Upsert by date+goalId+metric
+    const existing = db.select().from(glidepathSnapshots)
+      .where(and(
+        eq(glidepathSnapshots.userId, userId),
+        eq(glidepathSnapshots.goalId, goalId),
+        eq(glidepathSnapshots.date, date),
+        eq(glidepathSnapshots.metric, metric),
+      ))
+      .get();
+    if (existing) {
+      db.update(glidepathSnapshots)
+        .set({ plannedValue, actualValue })
+        .where(eq(glidepathSnapshots.id, existing.id))
+        .run();
+      return { ...existing, plannedValue, actualValue };
+    }
+    return db.insert(glidepathSnapshots).values({
+      userId, goalId, date, metric, plannedValue, actualValue,
+    }).returning().get();
+  }
+
+  getGlidepathSnapshots(userId: number, goalId: number): GlidepathSnapshot[] {
+    return db.select().from(glidepathSnapshots)
+      .where(and(
+        eq(glidepathSnapshots.userId, userId),
+        eq(glidepathSnapshots.goalId, goalId),
+      ))
+      .orderBy(asc(glidepathSnapshots.date))
+      .all();
+  }
+
+  generateGlidepath(userId: number, goalId: number, startValue: number, targetValue: number, weeks: number, metric: string): void {
+    // Generate weekly planned glidepath points (linear interpolation with slight curve)
+    const today = new Date();
+    const valueRange = startValue - targetValue; // positive for weight loss
+    for (let w = 0; w <= weeks; w++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + w * 7);
+      const dateStr = date.toISOString().split("T")[0];
+      // Slightly curved progression (faster at start, slower at end — realistic)
+      const progress = 1 - Math.pow(1 - w / weeks, 1.15);
+      const planned = startValue - valueRange * progress;
+      this.addGlidepathSnapshot(userId, goalId, dateStr, metric, Math.round(planned * 10) / 10, w === 0 ? startValue : null);
+    }
   }
 }
 

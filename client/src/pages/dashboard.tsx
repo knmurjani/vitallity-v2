@@ -1151,6 +1151,22 @@ export default function Dashboard() {
           <MoveRight className="w-4 h-4 text-text-light shrink-0" />
         </button>
 
+        {/* Goal Tracking CTA */}
+        <button
+          onClick={() => setLocation("/goals")}
+          className="w-full glass-card p-4 text-left flex items-center gap-4 active:scale-[0.99] transition-transform border border-primary/20"
+          data-testid="goal-tracking-cta"
+        >
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Target className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-sm font-bold text-foreground">Goal Tracking</p>
+            <p className="text-text-light text-[11px] mt-0.5">Glidepath, milestones & coaching</p>
+          </div>
+          <MoveRight className="w-4 h-4 text-text-light shrink-0" />
+        </button>
+
         {/* Health Records CTA */}
         <button
           onClick={() => setLocation("/health-records")}
